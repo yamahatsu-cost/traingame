@@ -1,0 +1,1085 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1.0,maximum-scale=1.0,user-scalable=no" />
+<title>Three.js 電車運転シミュレーター 基礎画面 v2</title>
+<style>
+  :root{
+    --panel:#090b0d;
+    --panel2:#111417;
+    --line:#2b3035;
+    --green:#00e645;
+    --amber:#d8b200;
+    --red:#d4001a;
+    --blue:#1e72ff;
+  }
+  *{box-sizing:border-box}
+  html,body{margin:0;width:100%;height:100%;overflow:hidden;background:#000;color:#eee;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI","Yu Gothic","Meiryo",sans-serif}
+  #app{position:relative;width:100vw;height:100vh;background:#000;overflow:hidden}
+  #threeWrap{position:absolute;inset:0;z-index:1;background:#0b1115}
+  canvas{display:block;width:100%;height:100%}
+
+  /* rain windshield */
+  .rainGlass{
+    position:absolute;inset:0;z-index:5;pointer-events:none;
+    background:
+      radial-gradient(circle at 12% 18%,rgba(255,255,255,.32) 0 1px,transparent 3px),
+      radial-gradient(circle at 28% 8%,rgba(255,255,255,.22) 0 1px,transparent 4px),
+      radial-gradient(circle at 41% 14%,rgba(255,255,255,.28) 0 1px,transparent 3px),
+      radial-gradient(circle at 63% 9%,rgba(255,255,255,.23) 0 1px,transparent 4px),
+      radial-gradient(circle at 75% 17%,rgba(255,255,255,.30) 0 1px,transparent 3px),
+      radial-gradient(circle at 88% 11%,rgba(255,255,255,.22) 0 1px,transparent 4px),
+      radial-gradient(circle at 53% 24%,rgba(255,255,255,.18) 0 1px,transparent 4px);
+    background-size:180px 150px;
+    opacity:.68;
+    mix-blend-mode:screen;
+    animation: rainDrift 9s linear infinite;
+  }
+  .rainGlass:before{
+    content:"";position:absolute;inset:0;
+    background:
+      repeating-linear-gradient(100deg,transparent 0 22px,rgba(255,255,255,.12) 23px,transparent 25px),
+      repeating-linear-gradient(82deg,transparent 0 34px,rgba(255,255,255,.07) 35px,transparent 37px);
+    opacity:.28;
+    filter:blur(.4px);
+    animation: rainLines 2.5s linear infinite;
+  }
+  @keyframes rainDrift{from{background-position:0 0}to{background-position:80px 240px}}
+  @keyframes rainLines{from{background-position:0 0}to{background-position:-70px 130px}}
+
+  /* window frame */
+  .cabFrame{
+    position:absolute;inset:0;z-index:8;pointer-events:none;
+  }
+  .cabFrame:before{
+    content:"";position:absolute;left:0;top:0;width:8.2vw;height:100%;
+    background:linear-gradient(90deg,#07090a 0,#15191b 40%,rgba(20,24,27,.72) 76%,transparent 100%);
+    box-shadow:inset -10px 0 20px #0009;
+  }
+  .cabFrame:after{
+    content:"";position:absolute;right:0;top:0;width:4.6vw;height:100%;
+    background:linear-gradient(270deg,#07090a 0,#15191b 45%,rgba(20,24,27,.58) 80%,transparent 100%);
+  }
+  .frontSill{
+    position:absolute;z-index:11;left:7.4vw;right:3.8vw;bottom:38.8vh;height:22px;
+    background:linear-gradient(#24282b,#0b0d0f 58%,#282c30);
+    border-top:1px solid #53585b;border-bottom:1px solid #000;
+    box-shadow:0 -8px 16px #0006,0 10px 18px #0008;
+    pointer-events:none;
+  }
+  .topShadow{
+    position:absolute;z-index:9;left:0;right:0;top:0;height:8vh;
+    background:linear-gradient(#000b,transparent);pointer-events:none;
+  }
+  .wiper{
+    position:absolute;z-index:12;right:18vw;bottom:40vh;width:5px;height:38vh;
+    background:linear-gradient(#050505,#272727,#060606);
+    transform:rotate(18deg);transform-origin:bottom center;border-radius:10px;
+    box-shadow:0 0 2px #000;
+    pointer-events:none;
+  }
+  .wiper.w2{right:22vw;height:32vh;transform:rotate(25deg);opacity:.75}
+
+  /* HUD */
+  .hud{
+    position:absolute;z-index:20;background:rgba(0,0,0,.62);border:1px solid rgba(255,255,255,.18);
+    border-radius:6px;backdrop-filter:blur(4px);box-shadow:0 6px 20px #0008;color:#eee
+  }
+  .topNotice{left:30%;right:30%;top:8px;text-align:center;padding:8px 10px;font-size:18px}
+  .leftMenu{top:12px;left:10px;width:135px;padding:8px;font-size:13px}
+  .leftMenu .btn{display:flex;align-items:center;gap:6px;border-top:1px solid #ffffff18;padding:8px 4px}
+  .leftMenu .btn:first-child{border-top:0}
+  .rightInfo{top:12px;right:10px;width:220px;padding:10px 12px;font-size:14px;transition:.2s}
+  .rightInfo .row{display:flex;justify-content:space-between;gap:8px;padding:4px 0;border-bottom:1px solid #ffffff14}
+  .rightInfo .big{font-size:26px;font-weight:700;color:#23ff42}
+  .bar{display:inline-grid;grid-template-columns:repeat(8,9px);gap:3px;vertical-align:middle}
+  .bar i{display:block;height:20px;background:#444;border-radius:1px}
+  .bar i.on{background:#e8e8e8}
+  .stationPanel{
+    right:10px;top:322px;width:220px;padding:7px 8px;
+    z-index:70;background:rgba(0,0,0,.72);font-size:11px
+  }
+  .stationPanel h3{margin:0 0 5px;text-align:center;font-size:12px;font-weight:600;border-bottom:1px solid #ffffff2b;padding-bottom:4px}
+  .stationRow{display:grid;grid-template-columns:16px 1fr 54px;align-items:center;font-size:10.5px;padding:4px 0;column-gap:4px}
+  .stationDot{width:10px;height:10px;border:2px solid #f3d442;border-radius:50%;position:relative}
+  .stationDot:after{content:"";position:absolute;left:2px;top:8px;width:2px;height:17px;background:#f3d442}
+  .stationRow:last-child .stationDot:after{display:none}
+  .stationRow.active{color:#fff;font-weight:700}
+  .stationRow.active .stationDot{background:#f3d442;box-shadow:0 0 8px #ffe66a}
+  .cameraMini{top:8px;left:156px;width:120px;padding:5px 8px;font-size:12px}
+
+  /* dashboard */
+  .dashboard{
+    position:absolute;z-index:30;left:0;right:0;bottom:0;height:41vh;
+    background:
+      radial-gradient(circle at 52% 20%,rgba(255,255,255,.06),transparent 14%),
+      linear-gradient(#23272a 0,#111416 9%,#0a0c0e 100%);
+    border-top:2px solid #303539;box-shadow:0 -18px 36px #000b;
+    padding:2.4vh 2.2vw 4.4vh 7.2vw;
+    display:grid;
+    grid-template-columns: 82px 17.5vw 19.5vw 12vw 25vw 13vw;
+    grid-template-rows: .84fr 16.5vh;
+    gap:1.0vw;
+  }
+  .panel{
+    background:linear-gradient(145deg,#111417,#050607);
+    border:1px solid #2a3034;border-radius:4px;
+    box-shadow:inset 0 1px 0 #ffffff12, inset 0 -16px 30px #0008, 0 4px 14px #0006;
+    position:relative;
+  }
+  .screw{position:absolute;width:7px;height:7px;border-radius:50%;background:radial-gradient(circle,#63686b,#101214);box-shadow:0 0 0 1px #000}
+  .s1{left:8px;top:8px}.s2{right:8px;top:8px}.s3{left:8px;bottom:8px}.s4{right:8px;bottom:8px}
+
+  .leftDevice{grid-column:2;grid-row:1 / span 2;padding:12px;display:grid;grid-template-columns:52px 1fr;gap:12px}
+  .phone{
+    background:linear-gradient(90deg,#141719,#060708);border:1px solid #303438;border-radius:12px;height:100%;position:relative;
+  }
+  .phone:before{content:"";position:absolute;left:16px;top:14px;width:20px;height:84%;background:#0a0b0c;border-radius:10px;box-shadow:inset 0 0 12px #000}
+  .phone:after{content:"";position:absolute;left:22px;bottom:18px;width:8px;height:8px;border-radius:50%;background:#34383c}
+  .lampList{display:grid;grid-template-columns:1fr;gap:3px;font-size:11px;color:#aaa;padding:4px 0}
+  .lampItem{display:flex;align-items:center;gap:6px}
+  .lampDot{width:8px;height:8px;border-radius:50%;background:#665500;box-shadow:inset 0 0 3px #000}
+  .lampDot.green{background:#5cff1d;box-shadow:0 0 8px #59ff00}
+  .lampDot.red{background:#ff2430;box-shadow:0 0 8px #ff2430}
+  .lampDot.amber{background:#ffd23c;box-shadow:0 0 8px #ffd23c}
+  .atsBadge{position:absolute;bottom:8px;left:72px;background:#d9bd18;color:#111;padding:2px 8px;font-weight:700;font-size:12px}
+
+  .meterPanel{overflow:hidden;grid-column:3;grid-row:1;padding:8px 12px;display:flex;align-items:center;justify-content:center;min-width:0;transform:translateY(0);max-height:100%;position:relative}
+  .meter{
+    width:min(7.6vw,110px);height:min(7.6vw,110px);min-width:82px;min-height:82px;border-radius:50%;
+    transform:translateY(calc(-18px - 10mm));
+    background:
+      radial-gradient(circle at center, #ffffff 0 75%, #000000 76% 100%);
+    border:5px solid #1c1f22;box-shadow:inset 0 0 10px #0008,0 2px 10px #000a;position:relative;
+    transform:none;
+  }
+  .meter .label,.meter .unit{display:none}
+  .meterCaption{color:#fff;text-align:center;font-weight:700;font-size:13px;margin-top:4px;text-shadow:0 1px 3px #000}
+  .ticks{position:absolute;inset:8%;border-radius:50%}
+  .tick{position:absolute;left:50%;top:50%;width:1px;height:46%;transform-origin:50% 0;background:transparent}
+  .tick:before{content:"";position:absolute;left:-1px;top:0;width:2px;height:8px;background:#222}
+  .tick.major:before{height:13px;width:3px}
+  .num{position:absolute;color:#222;font-size:11px;font-weight:600;transform:translate(-50%,-50%)}
+  .needle{
+  width:2px !important;
+  height:46%;
+  background:#d00;
+
+    position:absolute;left:50%;top:50%;width:3px;height:38%;background:#b40012;border-radius:4px;
+    transform-origin:50% 92%;box-shadow:0 0 2px #000;z-index:3;
+  }
+  .needle:after{content:"";position:absolute;left:-4px;bottom:0;width:11px;height:11px;border-radius:50%;background:#222;border:2px solid #666}
+  .needle.black{background:#222}
+  .hub{position:absolute;left:50%;top:50%;width:20px;height:20px;border-radius:50%;transform:translate(-50%,-50%);background:radial-gradient(circle at 35% 30%,#d7d7d7 0,#4c5053 45%,#111 76%);z-index:6;box-shadow:0 1px 4px #000}
+
+
+  .meterLift{
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    gap:22px;
+    transform:translateY(calc(-42px + 2mm)) !important;
+    width:100%;
+    height:100%;
+    pointer-events:none;
+  }
+  .meterLift .meterUnit{
+    display:flex;
+    flex-direction:column;
+    align-items:center;
+    justify-content:flex-start;
+    flex:0 0 auto;
+  }
+  .meterLift .meter{
+    transform:none !important;
+    flex:0 0 auto;
+  }
+
+  .clockSmall{display:none}
+  .clockSmall:before{content:"";position:absolute;left:25px;top:12px;width:2px;height:18px;background:#111;transform-origin:bottom;transform:rotate(18deg)}
+  .clockSmall:after{content:"";position:absolute;left:25px;top:20px;width:2px;height:11px;background:#111;transform-origin:bottom;transform:rotate(90deg)}
+
+  .statusPanel{grid-column:4;grid-row:1;padding:12px;font-size:12px}
+  .monitorPanel{grid-column:5;grid-row:1;padding:10px}
+  .monitor{
+    height:100%;background:#020303;border:3px solid #1b2228;border-radius:4px;color:#e8e8e8;padding:10px;position:relative;
+    box-shadow:inset 0 0 16px #000;
+  }
+  .monitorTop{font-size:11px;display:flex;justify-content:space-between;border-bottom:1px solid #1157d8;padding-bottom:4px}
+  .monitorNext{text-align:center;margin:14px 0 10px;font-size:17px}
+  .doors{display:grid;grid-template-columns:repeat(10,1fr);gap:4px;margin:7px 8px}
+  .doors span{display:block;height:22px;border:1px solid #777;text-align:center;font-size:10px;line-height:20px}
+  .doors span.open{background:#008f26;color:#baffc7;border-color:#16f04e}
+  .greenBar{height:14px;background:linear-gradient(90deg,#00b43c 0 65%,transparent 65%);border:1px solid #063}
+  .menuBtn{position:absolute;right:10px;bottom:8px;border:1px solid #1565e8;color:#bdd3ff;padding:2px 10px;font-size:11px}
+
+  .controlPanel{grid-column:6;grid-row:1 / span 2;padding:12px;display:grid;grid-template-rows:1fr auto;gap:10px}
+  .knobs{display:flex;gap:18px;align-items:center;justify-content:center}
+  .knobWrap{text-align:center;font-size:11px;color:#ccc}
+  .knob{width:48px;height:48px;border-radius:50%;background:radial-gradient(circle at 35% 30%,#54585b,#0b0c0d 60%);border:2px solid #252a2d;box-shadow:0 3px 8px #000,inset 0 0 8px #000;position:relative;margin:auto}
+  .knob:after{content:"";position:absolute;left:23px;top:4px;width:3px;height:18px;background:#d5d5d5;border-radius:4px}
+  .speaker{height:54px;width:160px;margin:5px auto;background:radial-gradient(circle,#1e2225 1px,transparent 3px);background-size:12px 12px;border-radius:6px;border:1px solid #222}
+
+  .leverArea{
+    grid-column:3 / span 2;grid-row:2;display:flex;align-items:stretch;justify-content:center;gap:10px;
+    background:
+      linear-gradient(180deg,#2a2f33 0%,#171b1e 34%,#070809 100%);
+    border:1px solid #2b3035;border-radius:9px;padding:9px 12px;position:relative;
+    min-height:128px;z-index:60;transform:translateY(calc(-3.2vh - 15mm)) perspective(520px) rotateX(4deg);
+    box-shadow:0 18px 28px #000c,inset 0 10px 20px #ffffff0a;
+  }
+  .leverScaleLeft,.leverScaleRight{
+    width:60px;height:100%;background:linear-gradient(#121416,#050607);border:1px solid #2d3337;border-radius:5px;color:#ddd;font-size:13px;
+    display:flex;flex-direction:column;justify-content:space-evenly;align-items:center;font-weight:700;
+  }
+  .leverScaleLeft .red{color:#ff333b}.leverScaleLeft .blue{color:#cfe6ff}
+  .leverSlot{
+    width:96px;height:100%;min-height:108px;border-radius:12px;background:linear-gradient(90deg,#030404 0%,#2a3033 50%,#030404 100%);
+    border:1px solid #333a3f;position:relative;box-shadow:inset 0 0 18px #000;
+  }
+  .leverHandle{
+    position:absolute;left:50%;top:var(--leverTop,42%);transform:translate(-50%,-50%);
+    width:84px;height:32px;border-radius:20px;background:linear-gradient(#5a6064 0%,#171a1c 42%,#050606 60%,#2d3336 100%);
+    box-shadow:0 8px 10px #000b,inset 0 2px 2px #ffffff2b;z-index:3;
+  }
+  .leverStem{
+    position:absolute;left:50%;top:calc(var(--leverTop,42%) + 6px);transform:translateX(-50%);
+    width:22px;height:52%;background:linear-gradient(90deg,#070808,#33383c,#070808);border-radius:8px;z-index:2;
+  }
+  .notchDisplay{
+    width:52px;height:44px;align-self:center;background:#050606;border:1px solid #272d31;border-radius:4px;
+    color:#e8ff00;text-shadow:0 0 8px #e8ff00;font-size:26px;font-weight:700;display:flex;align-items:center;justify-content:center;
+  }
+  .leverHelp{position:absolute;bottom:4px;left:8px;font-size:10px;color:#999}
+
+  .bottomButtons{display:none}
+  .bottomButtons button{
+    min-width:110px;height:48px;background:rgba(55,58,61,.72);border:1px solid #ffffff22;color:#eee;border-radius:2px;
+    font-size:15px;display:flex;align-items:center;justify-content:center;gap:8px;cursor:pointer;backdrop-filter:blur(2px)
+  }
+  .bottomButtons button.emg{background:linear-gradient(#9c1b1e,#4f080b);border-color:#f44;font-weight:700}
+  .bottomButtons button.active{background:#1d5c2c;border-color:#2dff63}
+
+  .commandDock{
+    grid-column:1;grid-row:1 / span 2;
+    display:flex;flex-direction:column;gap:6px;align-items:stretch;justify-content:flex-start;
+    background:linear-gradient(#15191c,#070809);border:1px solid #2b3035;border-radius:6px;padding:6px;
+    box-shadow:inset 0 0 16px #0009;
+  }
+  .commandDock button{
+    writing-mode:horizontal-tb;text-orientation:mixed;
+    min-height:48px;width:100%;border-radius:6px;border:1px solid #ffffff22;
+    background:linear-gradient(#33383b,#111315);color:#eee;font-size:12px;letter-spacing:.06em;
+    cursor:pointer;
+  }
+  .commandDock button.emg{background:linear-gradient(#a21b1f,#4f0708);border-color:#ef4a4a;font-weight:700}
+  .commandDock button.active{background:linear-gradient(#1f6730,#0a2b12);border-color:#25ff61}
+  .modal{
+    position:absolute;z-index:100;left:50%;top:50%;transform:translate(-50%,-50%);width:min(760px,92vw);max-height:78vh;overflow:auto;
+    background:rgba(10,12,14,.94);border:1px solid #ffffff30;border-radius:12px;padding:18px;box-shadow:0 20px 60px #000;color:#eee;display:none
+  }
+  .modal.show{display:block}
+  .modal h2{margin:0 0 12px}
+  .close{float:right;background:#333;color:#fff;border:1px solid #666;border-radius:6px;padding:6px 12px}
+  .routeMap{display:grid;grid-template-columns:70px 1fr 70px;gap:8px;align-items:center}
+  .routeLine{height:8px;background:linear-gradient(90deg,#ffd400,#ffd400);border-radius:10px;position:relative}
+  .routeLine:before,.routeLine:after{content:"";position:absolute;top:-6px;width:20px;height:20px;border-radius:50%;background:#111;border:3px solid #ffd400}
+  .routeLine:before{left:0}.routeLine:after{right:0}
+  @media(max-width:900px){
+    .meterLift{transform:translateY(calc(-34px + 2mm)) !important}
+    .meter{transform:none !important}
+    .dashboard{height:46vh;padding-left:5.8vw;padding-bottom:4.8vh;grid-template-columns:70px 14.5vw 21vw 11vw 22vw 12vw;gap:.55vw}
+    .leftMenu,.cameraMini{display:none}
+    .rightInfo{width:170px;font-size:12px}.rightInfo .big{font-size:20px}
+    .stationPanel{width:170px;font-size:10px;right:6px;top:292px;bottom:auto}
+    .topNotice{left:20%;right:20%;font-size:14px}
+    .bottomButtons button{min-width:70px;font-size:12px;height:42px}
+    .meter{min-width:76px;min-height:76px}
+  }
+</style>
+</head>
+<body>
+<div id="app">
+  <div id="threeWrap"></div>
+  <div class="rainGlass" id="rainGlass"></div>
+  <div class="cabFrame"></div>
+  <div class="topShadow"></div>
+  <div class="frontSill"></div>
+  <div class="wiper"></div>
+  <div class="wiper w2"></div>
+
+  <div class="hud cameraMini">🎥 運転台カメラ</div>
+  <div class="hud leftMenu">
+    <div class="btn">🎥 カメラ</div>
+    <div class="btn">⚙ 設定</div>
+    <div class="btn">🔊 サウンド</div>
+    <div class="btn">❔ 操作方法</div>
+    <div class="btn">↩ 初期化</div>
+  </div>
+  <div class="hud topNotice" id="notice">定位置に停車してください（残り 350m）</div>
+  <div class="hud rightInfo" id="rightInfo">
+    <div class="row"><b>次　新大久保（JB-09）</b><span id="clock">11:42:32</span></div>
+    <div class="row"><span>停車まで</span><span>あと <b id="dist">350</b> m</span></div>
+    <div class="row"><span>定刻</span><span>11:43:00</span></div>
+    <div class="row"><span>現在速度</span><span><b class="big" id="speedTxt">0.0</b> km/h</span></div>
+    <div class="row"><span>ノッチ</span><span id="notchTxt">切</span></div>
+    <div class="row"><span>ブレーキ</span><span><span class="bar" id="brakeBar"></span></span></div>
+    <div class="row"><span>ドア</span><span id="doorTxt" style="color:#17ff49;font-weight:700">閉</span></div>
+    <button id="emgSmall" style="margin-top:8px;background:#222;border:1px solid #666;color:#eee;border-radius:5px;padding:6px 12px">非常ブレーキ</button>
+  </div>
+
+  <div class="hud stationPanel" id="stationPanel">
+    <h3>停車駅</h3>
+    <div class="stationRow"><span class="stationDot"></span><span>駒野（JB-01）</span><span>11:40発</span></div>
+    <div class="stationRow active"><span class="stationDot"></span><span>高田馬場（JB-02）</span><span>11:41着</span></div>
+    <div class="stationRow"><span class="stationDot"></span><span>新大久保（JB-09）</span><span>11:43着</span></div>
+    <div class="stationRow"><span class="stationDot"></span><span>新宿（JB-10）</span><span>11:46着</span></div>
+    <div class="stationRow"><span class="stationDot"></span><span>代々木（JB-11）</span><span>11:48着</span></div>
+  </div>
+
+  <div class="dashboard">
+    <section class="panel leftDevice">
+      <span class="screw s1"></span><span class="screw s2"></span><span class="screw s3"></span><span class="screw s4"></span>
+      <div class="phone"></div>
+      <div class="lampList">
+        <div class="lampItem"><i class="lampDot green"></i>マスコンノッチ</div>
+        <div class="lampItem"><i class="lampDot"></i>ブレーキ開放</div>
+        <div class="lampItem"><i class="lampDot amber"></i>ドア閉</div>
+        <div class="lampItem"><i class="lampDot"></i>半自動扱い</div>
+        <div class="lampItem"><i class="lampDot"></i>ATS動作</div>
+        <div class="lampItem"><i class="lampDot"></i>ATS警戒</div>
+        <div class="lampItem"><i class="lampDot red"></i>非常ブレーキ</div>
+        <div class="lampItem"><i class="lampDot amber"></i>保安ブレーキ</div>
+        <div class="lampItem"><i class="lampDot amber"></i>EB装置</div>
+      </div>
+      <div class="atsBadge">ATS確認</div>
+    </section>
+
+    <section class="panel meterPanel">
+      <span class="screw s1"></span><span class="screw s2"></span><span class="screw s3"></span><span class="screw s4"></span>
+      <div class="meterLift">
+        <div class="meterUnit">
+          <div class="meter" id="speedMeter">
+            <div class="ticks" id="speedTicks"></div>
+            <div class="needle" id="speedNeedle"></div><div class="hub"></div>
+            <div class="label">速度</div><div class="unit">km/h</div>
+          </div>
+          <div class="meterCaption">速度 km/h</div>
+        </div>
+        <div class="meterUnit">
+          <div class="meter" id="pressureMeter">
+        <div class="ticks" id="pressureTicks"></div>
+        <div class="needle black" id="pressureNeedle"></div><div class="hub"></div>
+        <div class="label">ブレーキ圧</div><div class="unit">kPa</div>
+          </div>
+          <div class="meterCaption">ブレーキ kPa</div>
+        </div>
+      </div>
+      <div class="clockSmall"></div>
+    </section>
+
+    <section class="panel statusPanel">
+      <span class="screw s1"></span><span class="screw s2"></span><span class="screw s3"></span><span class="screw s4"></span>
+      <div class="lampList">
+        <div class="lampItem"><i class="lampDot green"></i>前照灯</div>
+        <div class="lampItem"><i class="lampDot amber"></i>尾灯</div>
+        <div class="lampItem"><i class="lampDot"></i>室内灯</div>
+        <div class="lampItem"><i class="lampDot"></i>ワイパー</div>
+        <div class="lampItem"><i class="lampDot"></i>パンタグラフ</div>
+        <div class="lampItem"><i class="lampDot amber"></i>警笛</div>
+      </div>
+    </section>
+
+    <section class="panel monitorPanel">
+      <span class="screw s1"></span><span class="screw s2"></span><span class="screw s3"></span><span class="screw s4"></span>
+      <div class="monitor">
+        <div class="monitorTop"><span>回1205A　普通　新宿 行き</span><span>11:42:32</span></div>
+        <div class="monitorNext">次は　新大久保（JB-09）</div>
+        <div style="display:grid;grid-template-columns:46px 1fr;gap:8px;font-size:12px;align-items:center">
+          <span>ドア</span><div class="doors" id="doorBlocks"></div>
+          <span>車内信号</span><div class="greenBar">        </div>
+        <div class="menuBtn">メニュー</div>
+      </div>
+    </section>
+
+    <section class="panel controlPanel">
+      <span class="screw s1"></span><span class="screw s2"></span><span class="screw s3"></span><span class="screw s4"></span>
+      <div class="knobs">
+        <div class="knobWrap"><div class="knob"></div><div>前照灯<br>切　入</div></div>
+        <div class="knobWrap"><div class="knob"></div><div>尾灯<br>切　入</div></div>
+        <div class="knobWrap"><div class="knob"></div><div>室内灯<br>切　入</div></div>
+        <div class="knobWrap"><div class="knob"></div><div>ワイパー<br>弱　強</div></div>
+      </div>
+      <div class="speaker"></div>
+    </section>
+
+    <section class="commandDock">
+      <button id="settingsBtn2">設定</button>
+      <button id="routeBtn2">路線図</button>
+      <button id="cameraBtn2">カメラ</button>
+      <button id="doorBtn2">ドア</button>
+      <button class="emg" id="emgBtn2">非常</button>
+      <button id="hornBtn2">警笛</button>
+    </section>
+
+    <section class="leverArea" id="leverArea">
+      <div class="leverScaleLeft"><span class="blue">力行</span><span>切</span><span>ブレーキ</span><span class="red">非常</span></div>
+      <div class="leverSlot" id="leverSlot">
+        <div class="leverStem" id="leverStem"></div>
+        <div class="leverHandle" id="leverHandle"></div>
+      </div>
+      <div class="leverScaleRight"><span>5</span><span>4</span><span>3</span><span>2</span><span>1</span></div>
+      <div class="notchDisplay" id="notchDisplay">切</div>
+      <div class="leverHelp">ドラッグ / W・Sキー</div>
+    </section>
+  </div>
+
+  <div class="bottomButtons">
+    <button id="settingsBtn">⚙ 設定</button>
+    <button id="routeBtn">▦ 路線図</button>
+    <button id="cameraBtn">📷 カメラ</button>
+    <button id="doorBtn">▥ ドア</button>
+    <button class="emg" id="emgBtn">非常</button>
+    <button id="hornBtn">📣 警笛</button>
+    <button id="pauseBtn">Ⅱ 一時停止</button>
+  </div>
+
+  <div class="modal" id="modal">
+    <button class="close" id="closeModal">閉じる</button>
+    <div id="modalContent"></div>
+  </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.min.js"></script>
+<script>
+(() => {
+  const wrap = document.getElementById('threeWrap');
+  const scene = new THREE.Scene();
+  scene.background = new THREE.Color(0x9aa7ad);
+  scene.fog = new THREE.Fog(0x9aa7ad, 90, 460);
+
+  const camera = new THREE.PerspectiveCamera(58, innerWidth / innerHeight, 0.1, 900);
+  camera.position.set(0, 2.55, 4.5);
+  camera.lookAt(0, 1.18, -90);
+
+  const renderer = new THREE.WebGLRenderer({antialias:true, powerPreference:'high-performance'});
+  renderer.setPixelRatio(Math.min(devicePixelRatio, 2));
+  renderer.setSize(innerWidth, innerHeight);
+  renderer.shadowMap.enabled = true;
+  renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+  wrap.appendChild(renderer.domElement);
+
+  const hemi = new THREE.HemisphereLight(0xb7c7d7, 0x253018, 1.35);
+  scene.add(hemi);
+  const dir = new THREE.DirectionalLight(0xffffff, 1.2);
+  dir.position.set(-40, 80, 20);
+  dir.castShadow = true;
+  scene.add(dir);
+
+  const mat = {
+    ballast: new THREE.MeshStandardMaterial({color:0x6b675f, roughness:0.96, metalness:0.02}),
+    rail: new THREE.MeshStandardMaterial({color:0x504234, roughness:0.42, metalness:0.65}),
+    sleeper: new THREE.MeshStandardMaterial({color:0x5a4334, roughness:0.86}),
+    concrete: new THREE.MeshStandardMaterial({color:0xa7aaa2, roughness:0.82}),
+    fence: new THREE.MeshStandardMaterial({color:0x78907d, roughness:.72}),
+    pole: new THREE.MeshStandardMaterial({color:0x646969, roughness:.45, metalness:.15}),
+    wire: new THREE.LineBasicMaterial({color:0x1b1b1b, linewidth:1}),
+    green: new THREE.MeshStandardMaterial({color:0x226934, roughness:.7}),
+    signalDark: new THREE.MeshStandardMaterial({color:0x111111, roughness:.35}),
+    signalGreen: new THREE.MeshBasicMaterial({color:0x00ff66}),
+    signalRed: new THREE.MeshBasicMaterial({color:0xff1b25}),
+    platform: new THREE.MeshStandardMaterial({color:0xb8b3a8, roughness:.86}),
+    platformEdge: new THREE.MeshStandardMaterial({color:0xe8cf44, roughness:.62}),
+    roof: new THREE.MeshStandardMaterial({color:0x8b9497, roughness:.72, metalness:.08}),
+    sign: new THREE.MeshBasicMaterial({color:0xf4f4e8}),
+    signBlue: new THREE.MeshBasicMaterial({color:0x0d55b8}),
+    yellowTile: new THREE.MeshStandardMaterial({color:0xd6b832, roughness:.78}),
+    platformTile: new THREE.MeshStandardMaterial({color:0x9d9d96, roughness:.9}),
+    darkWall: new THREE.MeshStandardMaterial({color:0x2a2d30, roughness:.78}),
+    trainBody: new THREE.MeshStandardMaterial({color:0xd9d9d4, roughness:.55, metalness:.12}),
+    trainStripeGreen: new THREE.MeshBasicMaterial({color:0x6abf32}),
+    trainStripePink: new THREE.MeshBasicMaterial({color:0xdd378e}),
+    trainStripeBlue: new THREE.MeshBasicMaterial({color:0x2d7dd2}),
+    displayYellow: new THREE.MeshBasicMaterial({color:0xffdd22}),
+    adPanel: new THREE.MeshBasicMaterial({color:0xffffff}),
+    rust: new THREE.MeshStandardMaterial({color:0x6b4a35, roughness:.8, metalness:.18}),
+    bridge: new THREE.MeshStandardMaterial({color:0x87908d, roughness:.62, metalness:.12}),
+    grass: new THREE.MeshStandardMaterial({color:0x2f6f35, roughness:.9})
+  };
+
+  function makeWindowTexture(color1, color2){
+    const c=document.createElement('canvas');c.width=256;c.height=256;const g=c.getContext('2d');
+    g.fillStyle=color1;g.fillRect(0,0,256,256);
+    for(let y=18;y<240;y+=36){for(let x=16;x<240;x+=42){
+      g.fillStyle = (Math.random()<.18)?'#d6e6ee':color2;
+      g.fillRect(x,y,26,18);
+      g.fillStyle='rgba(255,255,255,.16)';g.fillRect(x+2,y+2,8,14);
+    }}
+    g.fillStyle='rgba(0,0,0,.16)';
+    for(let y=0;y<256;y+=36)g.fillRect(0,y,256,2);
+    for(let x=0;x<256;x+=42)g.fillRect(x,0,2,256);
+    const tex=new THREE.CanvasTexture(c);tex.wrapS=tex.wrapT=THREE.RepeatWrapping;tex.repeat.set(1,1);
+    return tex;
+  }
+
+  const buildingMats = [
+    new THREE.MeshStandardMaterial({map:makeWindowTexture('#a9aaa5','#6e838e'), roughness:.84}),
+    new THREE.MeshStandardMaterial({map:makeWindowTexture('#8e8276','#53616a'), roughness:.82}),
+    new THREE.MeshStandardMaterial({map:makeWindowTexture('#b8b4aa','#758994'), roughness:.82}),
+    new THREE.MeshStandardMaterial({map:makeWindowTexture('#8f9699','#4b5d66'), roughness:.85})
+  ];
+
+  const world = new THREE.Group();
+  scene.add(world);
+
+  function addBallast(z){
+    const g = new THREE.BoxGeometry(12, .28, 34);
+    const m = new THREE.Mesh(g, mat.ballast);
+    m.position.set(0, -0.16, z);
+    m.receiveShadow = true;
+    world.add(m);
+    for(let i=0;i<70;i++){
+      const stone = new THREE.Mesh(
+        new THREE.BoxGeometry(.08+Math.random()*.18,.025+Math.random()*.05,.08+Math.random()*.2),
+        mat.ballast
+      );
+      stone.position.set((Math.random()-.5)*11.4, .02, z-16+Math.random()*32);
+      stone.rotation.y=Math.random()*Math.PI;
+      world.add(stone);
+    }
+  }
+
+  function addTrackSegment(z, x=0){
+    const railGeo = new THREE.BoxGeometry(.12,.14,34);
+    [-.82,.82].forEach(rx=>{
+      const r=new THREE.Mesh(railGeo, mat.rail);
+      r.position.set(x+rx,.16,z); r.castShadow=true; r.receiveShadow=true; world.add(r);
+      const shine=new THREE.Mesh(new THREE.BoxGeometry(.08,.025,34), new THREE.MeshStandardMaterial({color:0xb6aaa1,roughness:.3,metalness:.75}));
+      shine.position.set(x+rx,.245,z); world.add(shine);
+    });
+    for(let i=0;i<23;i++){
+      const s=new THREE.Mesh(new THREE.BoxGeometry(2.25,.12,.18), mat.sleeper);
+      s.position.set(x,.055,z-16+i*1.45);
+      s.receiveShadow=true; s.castShadow=true; world.add(s);
+    }
+  }
+
+  function addCatenary(z){
+    const poleGeo = new THREE.BoxGeometry(.16,7,.16);
+    [-5.4,5.4].forEach(x=>{
+      const p=new THREE.Mesh(poleGeo, mat.pole); p.position.set(x,3.4,z); p.castShadow=true; world.add(p);
+      // side brackets like real overhead line arms
+      const arm=new THREE.Mesh(new THREE.BoxGeometry(2.1,.07,.07), mat.pole);
+      arm.position.set(x - Math.sign(x)*.95,5.55,z); arm.rotation.z = Math.sign(x)*0.18; world.add(arm);
+      const ins=new THREE.Mesh(new THREE.CylinderGeometry(.06,.06,.22,10), new THREE.MeshStandardMaterial({color:0xd8d8cf,roughness:.5}));
+      ins.position.set(x - Math.sign(x)*1.95,5.45,z); ins.rotation.x=Math.PI/2; world.add(ins);
+    });
+    const beam=new THREE.Mesh(new THREE.BoxGeometry(11.2,.14,.16), mat.pole); beam.position.set(0,6.6,z); world.add(beam);
+    // truss diagonals
+    for(let i=-5;i<5;i++){
+      const diag=new THREE.Mesh(new THREE.BoxGeometry(.06,.06,1.55), mat.pole);
+      diag.position.set(i+0.5,6.25,z); diag.rotation.z=.75; diag.rotation.y=Math.PI/2; world.add(diag);
+    }
+    const tri1=new THREE.Line(
+      new THREE.BufferGeometry().setFromPoints([new THREE.Vector3(-5.4,6.6,z),new THREE.Vector3(0,5.65,z),new THREE.Vector3(5.4,6.6,z)]),
+      mat.wire
+    ); world.add(tri1);
+    const sig = new THREE.Group();
+    const box = new THREE.Mesh(new THREE.BoxGeometry(.42,1.1,.18), mat.signalDark); sig.add(box);
+    const light = new THREE.Mesh(new THREE.SphereGeometry(.13,16,16), mat.signalGreen);
+    light.position.set(0,.25,-.1); sig.add(light);
+    sig.position.set(-2.8,5.45,z-.8);
+    world.add(sig);
+  }
+
+  function addWires(){
+    for(let x of [-1.3,0,1.3]){
+      const pts=[]; for(let z=40;z>-1900;z-=40) pts.push(new THREE.Vector3(x,6.1,z));
+      world.add(new THREE.Line(new THREE.BufferGeometry().setFromPoints(pts), mat.wire));
+    }
+    for(let x of [-5.2,5.2]){
+      const pts=[]; for(let z=40;z>-1900;z-=40) pts.push(new THREE.Vector3(x,5.6,z));
+      world.add(new THREE.Line(new THREE.BufferGeometry().setFromPoints(pts), mat.wire));
+    }
+  }
+
+  function addBuilding(side, z, zone){
+    const isTown = zone==='town' || zone==='station';
+    const w = isTown ? 4 + Math.random()*5 : 3 + Math.random()*4;
+    const h = zone==='city' ? 16 + Math.random()*22 : isTown ? 7 + Math.random()*15 : 4 + Math.random()*8;
+    const d = 8 + Math.random()*14;
+    const b = new THREE.Mesh(new THREE.BoxGeometry(w,h,d), buildingMats[Math.floor(Math.random()*buildingMats.length)]);
+    const setback = zone==='elevated' ? 15 + Math.random()*10 : 10 + Math.random()*10;
+    b.position.set(side*setback, h/2-0.28, z + (Math.random()-.5)*16);
+    b.rotation.y = side*(Math.random()*.05);
+    b.castShadow=true; b.receiveShadow=true; world.add(b);
+    // balcony / shop bands
+    if(Math.random()<.55){
+      const band = new THREE.Mesh(new THREE.BoxGeometry(w*1.03,.08,d*1.02), new THREE.MeshStandardMaterial({color:0x3d4448,roughness:.75}));
+      band.position.set(b.position.x, Math.min(h-1, 2.8+Math.random()*3), b.position.z);
+      world.add(band);
+    }
+  }
+
+  function addTree(side,z,scale=1){
+    const trunk=new THREE.Mesh(new THREE.CylinderGeometry(.10*scale,.16*scale,2.2*scale,8), new THREE.MeshStandardMaterial({color:0x4a3525}));
+    trunk.position.set(side*(7.8+Math.random()*2.2),1.1*scale,z-8+Math.random()*16); world.add(trunk);
+    const leaf=new THREE.Mesh(new THREE.SphereGeometry((.9+Math.random()*.55)*scale,12,10), mat.green);
+    leaf.position.set(trunk.position.x,2.5*scale,trunk.position.z); world.add(leaf);
+  }
+
+  function addRoadAndFence(side,z,zone){
+    const wallH = zone==='elevated' ? 2.6 : 1.5;
+    const wallMat = zone==='elevated' ? mat.concrete : mat.fence;
+    const wall=new THREE.Mesh(new THREE.BoxGeometry(.22,wallH,34), wallMat);
+    wall.position.set(side*6.7,wallH/2-.1,z); wall.receiveShadow=true; world.add(wall);
+    if(zone==='town' || zone==='city'){
+      const road=new THREE.Mesh(new THREE.BoxGeometry(5,.035,34), new THREE.MeshStandardMaterial({color:0x33383b,roughness:.9}));
+      road.position.set(side*10.2,.02,z); world.add(road);
+      if(Math.random()<.4){
+        const car=new THREE.Mesh(new THREE.BoxGeometry(1.5,.55,3.0), new THREE.MeshStandardMaterial({color:[0xffffff,0x345f9a,0x8a2020,0x222222][Math.floor(Math.random()*4)],roughness:.55}));
+        car.position.set(side*10.4,.35,z+(Math.random()-.5)*20); car.castShadow=true; world.add(car);
+      }
+    }
+  }
+
+  function addSideObjects(z){
+    const routeZ = -z;
+    let zone = 'town';
+    if(routeZ < 180) zone = 'city';
+    else if(routeZ < 360) zone = 'residential';
+    else if(routeZ < 620) zone = 'station';
+    else if(routeZ < 900) zone = 'elevated';
+    else if(routeZ < 1250) zone = 'suburb';
+    else zone = 'city';
+
+    [-1,1].forEach(side=>addRoadAndFence(side,z,zone));
+
+    // overhead road/rail bridge occasionally, like urban railway views
+    if(Math.abs(Math.round(z)) % 272 < 34){
+      // 線路をまたぎ、左右の街区・ビル方向へ伸びる高架橋
+      const bridgeDeck = new THREE.Mesh(new THREE.BoxGeometry(34,.55,5.8), mat.bridge);
+      bridgeDeck.position.set(0,5.05,z-6); world.add(bridgeDeck);
+
+      // 道路面の継ぎ目
+      for(let bx=-14; bx<=14; bx+=4){
+        const seam = new THREE.Mesh(new THREE.BoxGeometry(.045,.58,5.9), new THREE.MeshStandardMaterial({color:0x646d6a,roughness:.7}));
+        seam.position.set(bx,5.36,z-6); world.add(seam);
+      }
+
+      // ビル側へ続く桁
+      [-1,1].forEach(side=>{
+        const approach = new THREE.Mesh(new THREE.BoxGeometry(16,.42,4.8), mat.bridge);
+        approach.position.set(side*18,5.0,z-6); world.add(approach);
+
+        for(let px=9; px<=24; px+=7){
+          const pier = new THREE.Mesh(new THREE.BoxGeometry(.55,5.2,.55), mat.concrete);
+          pier.position.set(side*px,2.55,z-6); world.add(pier);
+        }
+
+        // 高架橋の下に側道を少し見せる
+        const sideRoad = new THREE.Mesh(new THREE.BoxGeometry(9,.04,5.4), new THREE.MeshStandardMaterial({color:0x31383c,roughness:.9}));
+        sideRoad.position.set(side*15,.03,z-6); world.add(sideRoad);
+      });
+
+      // 線路脇の橋脚
+      [-7.2,7.2].forEach(x=>{
+        const pier = new THREE.Mesh(new THREE.BoxGeometry(.55,5.2,.55), mat.concrete);
+        pier.position.set(x,2.55,z-6); world.add(pier);
+      });
+    }
+
+    // trackside cabinets, signs, kilometer posts, grass patches
+    if(Math.random()<.65){
+      const side = Math.random()<.5?-1:1;
+      const box = new THREE.Mesh(new THREE.BoxGeometry(.45,.65,.32), new THREE.MeshStandardMaterial({color:0xd8d8d0,roughness:.75}));
+      box.position.set(side*(5.7+Math.random()*.5),.35,z-8+Math.random()*16); world.add(box);
+    }
+    if(Math.random()<.55){
+      const side = Math.random()<.5?-1:1;
+      const sign = new THREE.Mesh(new THREE.BoxGeometry(.32,.42,.04), new THREE.MeshBasicMaterial({color:0xffffff}));
+      sign.position.set(side*3.15,.95,z-10+Math.random()*20); world.add(sign);
+    }
+    if(zone==='suburb' || zone==='residential' || zone==='city'){
+      // 線路脇の雑草・植栽
+      for(let g=0;g<(zone==='city'?2:5);g++){
+        const grass = new THREE.Mesh(new THREE.BoxGeometry(.55+Math.random()*.8,.035,1.0+Math.random()*1.6), mat.grass);
+        grass.position.set((Math.random()<.5?-1:1)*(2.6+Math.random()*2.2),.04,z-14+Math.random()*28);
+        world.add(grass);
+      }
+
+      // 街路樹：線路の外側に点在
+      if(Math.random()<.85){
+        [-1,1].forEach(side=>{
+          if(Math.random()<.75){
+            const trunk = new THREE.Mesh(new THREE.CylinderGeometry(.09,.13,2.2,9), new THREE.MeshStandardMaterial({color:0x4a3525,roughness:.8}));
+            trunk.position.set(side*(7.2+Math.random()*1.3),1.05,z-13+Math.random()*26);
+            world.add(trunk);
+
+            const leaf1 = new THREE.Mesh(new THREE.SphereGeometry(.85+Math.random()*.35,12,10), mat.green);
+            leaf1.position.set(trunk.position.x,2.45,trunk.position.z);
+            world.add(leaf1);
+
+            const leaf2 = new THREE.Mesh(new THREE.SphereGeometry(.55+Math.random()*.25,10,8), mat.green);
+            leaf2.position.set(trunk.position.x+side*.35,2.8,trunk.position.z+.25);
+            world.add(leaf2);
+          }
+        });
+      }
+    }
+
+    if(zone !== 'station'){
+      const count = zone==='suburb' ? 1 : zone==='residential' ? 2 : 3;
+      for(let side of [-1,1]){
+        for(let i=0;i<count;i++) addBuilding(side, z-12+i*12, zone);
+        if(zone==='suburb' || zone==='residential'){
+          addTree(side,z,1.15);
+          if(Math.random()<.6) addTree(side,z+10,.9);
+        }
+      }
+    }
+  }
+
+
+  function addStationSign(x,y,z){
+    const g = new THREE.Group();
+    const board = new THREE.Mesh(new THREE.BoxGeometry(3.4,.58,.08), mat.sign);
+    const line = new THREE.Mesh(new THREE.BoxGeometry(3.4,.12,.09), mat.signBlue);
+    line.position.y=-.19;
+    g.add(board,line);
+    const nameBlock = new THREE.Mesh(new THREE.BoxGeometry(1.25,.16,.1), new THREE.MeshBasicMaterial({color:0x111111}));
+    nameBlock.position.set(-.2,.06,.02); g.add(nameBlock);
+    const sideBlock = new THREE.Mesh(new THREE.BoxGeometry(.38,.16,.1), new THREE.MeshBasicMaterial({color:0x1d8f2f}));
+    sideBlock.position.set(1.18,.06,.02); g.add(sideBlock);
+    g.position.set(x,y,z); world.add(g);
+  }
+
+  function addHangingBoard(x,z,labelColor=0xffdd22){
+    const pole = new THREE.Mesh(new THREE.BoxGeometry(.06,1.1,.06), mat.pole);
+    pole.position.set(x,3.2,z); world.add(pole);
+    const board = new THREE.Mesh(new THREE.BoxGeometry(2.4,.45,.08), new THREE.MeshBasicMaterial({color:labelColor}));
+    board.position.set(x,2.55,z); world.add(board);
+    const dark = new THREE.Mesh(new THREE.BoxGeometry(1.3,.12,.09), new THREE.MeshBasicMaterial({color:0x111111}));
+    dark.position.set(x,2.55,z-.01); world.add(dark);
+  }
+
+  function addTrainOnOppositeTrack(zStart,length,side=1,stripe='green'){
+    const stripeMat = stripe==='pink'?mat.trainStripePink:stripe==='blue'?mat.trainStripeBlue:mat.trainStripeGreen;
+    for(let c=0;c<4;c++){
+      const zc = zStart-20-c*17;
+      const car = new THREE.Mesh(new THREE.BoxGeometry(2.7,2.55,16), mat.trainBody);
+      car.position.set(side*3.4,1.32,zc); world.add(car);
+      const st = new THREE.Mesh(new THREE.BoxGeometry(2.75,.22,15.6), stripeMat);
+      st.position.set(side*3.4,1.45,zc); world.add(st);
+      for(let i=0;i<6;i++){
+        const win = new THREE.Mesh(new THREE.BoxGeometry(2.78,.42,.9), new THREE.MeshBasicMaterial({color:0x1b2830}));
+        win.position.set(side*3.4,1.92,zc-6+i*1.9); world.add(win);
+      }
+    }
+  }
+
+  function addPlatformAccessories(side,zStart,length,variant){
+    const pillarMat = variant==='subway' ? new THREE.MeshStandardMaterial({color:0x303030,roughness:.55}) : mat.pole;
+    for(let i=0;i<9;i++){
+      const z=zStart-14-i*(length-28)/8;
+      const col=new THREE.Mesh(new THREE.CylinderGeometry(.12,.12,2.7,14), pillarMat);
+      col.position.set(side*5.25,1.55,z); world.add(col);
+      if(variant==='terminal'){
+        const base=new THREE.Mesh(new THREE.CylinderGeometry(.32,.36,.18,16), mat.concrete);
+        base.position.set(side*5.25,.86,z); world.add(base);
+      }
+    }
+    for(let i=0;i<5;i++){
+      const z = zStart-22-i*(length-44)/4;
+      const bench = new THREE.Mesh(new THREE.BoxGeometry(1.15,.25,.35), new THREE.MeshStandardMaterial({color:0x56606a,roughness:.7}));
+      bench.position.set(side*5.45,.93,z); world.add(bench);
+      const board = new THREE.Mesh(new THREE.BoxGeometry(.95,1.15,.08), mat.adPanel);
+      board.position.set(side*6.08,1.55,z-4); board.rotation.y = side*Math.PI/2; world.add(board);
+    }
+    addStationSign(side*5.0,2.25,zStart-length*.45);
+    addHangingBoard(side*4.7,zStart-length*.27, variant==='terminal'?0xffdd22:0xffffff);
+  }
+
+  function addStation(zStart, length=190, variant='local'){
+    const zMid = zStart - length/2;
+    const roofHigh = variant==='terminal' ? 3.7 : variant==='subway' ? 3.35 : 3.15;
+    const platformW = variant==='terminal' ? 3.4 : 2.6;
+    const roofW = variant==='terminal' ? 4.7 : variant==='subway' ? 4.2 : 3.3;
+    const roofMat = variant==='subway'
+      ? new THREE.MeshStandardMaterial({color:0xcfd3d6, roughness:.48, metalness:.15})
+      : variant==='terminal'
+      ? new THREE.MeshStandardMaterial({color:0xbcc4c6, roughness:.42, metalness:.12})
+      : mat.roof;
+
+    [-1,1].forEach(side=>{
+      const platform = new THREE.Mesh(new THREE.BoxGeometry(platformW,.55,length), variant==='subway'?mat.platformTile:mat.platform);
+      platform.position.set(side*4.85,.30,zMid); platform.receiveShadow=true; world.add(platform);
+
+      const edge = new THREE.Mesh(new THREE.BoxGeometry(.25,.085,length), mat.yellowTile);
+      edge.position.set(side*3.47,.63,zMid); world.add(edge);
+      const whiteLine = new THREE.Mesh(new THREE.BoxGeometry(.08,.09,length*.92), new THREE.MeshStandardMaterial({color:0xe2e2dc,roughness:.8}));
+      whiteLine.position.set(side*3.18,.64,zMid); world.add(whiteLine);
+
+      const wallH = variant==='subway' ? 2.4 : 1.25;
+      const wallMat = variant==='subway' ? mat.darkWall : mat.concrete;
+      const wall = new THREE.Mesh(new THREE.BoxGeometry(.22,wallH,length), wallMat);
+      wall.position.set(side*6.25,wallH/2+.35,zMid); world.add(wall);
+
+      if(variant==='subway'){
+        const ceiling=new THREE.Mesh(new THREE.BoxGeometry(6.2,.18,length), roofMat);
+        ceiling.position.set(side*4.85,3.55,zMid); world.add(ceiling);
+        for(let i=0;i<8;i++){
+          const light = new THREE.Mesh(new THREE.BoxGeometry(.12,.05,7.5), new THREE.MeshBasicMaterial({color:0xf7f4d0}));
+          light.position.set(side*4.15,3.42,zStart-20-i*(length-40)/7); world.add(light);
+        }
+      }else{
+        const roof=new THREE.Mesh(new THREE.BoxGeometry(roofW,.16,length*.9), roofMat);
+        roof.position.set(side*5.05,roofHigh,zMid);
+        roof.rotation.z=side*(variant==='terminal'?.08:.04);
+        world.add(roof);
+        if(variant==='local'){
+          for(let i=0;i<8;i++){
+            const stripe=new THREE.Mesh(new THREE.BoxGeometry(roofW,.02,.32), new THREE.MeshBasicMaterial({color:0x2e8e51}));
+            stripe.position.set(side*5.05,roofHigh+.09,zStart-18-i*(length-36)/7);
+            stripe.rotation.z=roof.rotation.z;
+            world.add(stripe);
+          }
+        }
+      }
+      addPlatformAccessories(side,zStart,length,variant);
+    });
+
+    if(variant==='terminal'){
+      for(let i=0;i<3;i++){
+        const bridge=new THREE.Mesh(new THREE.BoxGeometry(11,.38,3.8), mat.roof);
+        bridge.position.set(0,4.0,zStart-50-i*42); world.add(bridge);
+      }
+    }
+
+    if(variant==='subway'){
+      [-1,1].forEach(side=>{
+        for(let i=0;i<12;i++){
+          const gate=new THREE.Mesh(new THREE.BoxGeometry(.08,.9,1.0), new THREE.MeshStandardMaterial({color:0xf0f0e8,roughness:.6}));
+          gate.position.set(side*3.52,1.15,zStart-16-i*(length-32)/11); world.add(gate);
+          const red=new THREE.Mesh(new THREE.BoxGeometry(.09,.12,.7), new THREE.MeshBasicMaterial({color:0xe73b32}));
+          red.position.set(side*3.50,1.3,zStart-16-i*(length-32)/11); world.add(red);
+        }
+      });
+    }
+
+    for(let i=0;i<6;i++){
+      const m=new THREE.Mesh(new THREE.BoxGeometry(.08,.95,.08), mat.pole);
+      m.position.set(2.9,.55,zStart-28-i*24); world.add(m);
+      const plate=new THREE.Mesh(new THREE.BoxGeometry(.42,.28,.04), new THREE.MeshBasicMaterial({color:0xffffff}));
+      plate.position.set(2.9,1.15,zStart-28-i*24); world.add(plate);
+    }
+
+    const peopleCount = variant==='terminal'?32:variant==='subway'?18:14;
+    for(let i=0;i<peopleCount;i++){
+      const side = Math.random()<.5 ? -1 : 1;
+      const coat = [0x222222,0x303846,0x5b4638,0x14345c][Math.floor(Math.random()*4)];
+      const body = new THREE.Mesh(new THREE.CylinderGeometry(.12,.17,.9,8), new THREE.MeshStandardMaterial({color:coat,roughness:.8}));
+      body.position.set(side*(4.55+Math.random()*1.1),1.15,zStart-18-Math.random()*(length-36)); world.add(body);
+      const head = new THREE.Mesh(new THREE.SphereGeometry(.15,10,8), new THREE.MeshStandardMaterial({color:0xc49a78,roughness:.7}));
+      head.position.set(body.position.x,1.72,body.position.z); world.add(head);
+    }
+
+    if(variant==='terminal' || variant==='local') addTrainOnOppositeTrack(zStart-55,length,1,variant==='terminal'?'green':'pink');
+    if(variant==='subway') addTrainOnOppositeTrack(zStart-60,length,-1,'blue');
+  }
+
+  // Long non-repeating route: city -> residential -> station -> elevated -> suburb -> city
+  for(let z=20; z>-1850; z-=34){
+    addBallast(z);
+    addTrackSegment(z,0);
+    addTrackSegment(z,3.4);
+    addTrackSegment(z,-3.4);
+    if(Math.abs(Math.round(z)) % 68 < 34) addCatenary(z);
+    addSideObjects(z);
+  }
+  addStation(-390, 210, 'local');
+  addStation(-820, 240, 'terminal');
+  addStation(-1280, 210, 'subway');
+  addWires();
+
+  // distant curve markers/rails using line, subtle right curve illusion
+  const curveLineMat = new THREE.LineBasicMaterial({color:0x4d3d31});
+  for(let rx of [-.82,.82,2.58,4.22,-4.22,-2.58]){
+    const pts=[];
+    for(let i=0;i<80;i++){
+      const z=10-i*7;
+      const x=rx + Math.sin(i/22)*1.8*(i/80);
+      pts.push(new THREE.Vector3(x,.32,z));
+    }
+    world.add(new THREE.Line(new THREE.BufferGeometry().setFromPoints(pts), curveLineMat));
+  }
+
+  let speed=0, notch=0, brake=0, doorClosed=true, distance=350, paused=false;
+  let stationStopDone=false;
+  const maxSpeed = 120;
+
+  const speedNeedle = document.getElementById('speedNeedle');
+  const pressureNeedle = document.getElementById('pressureNeedle');
+  const speedTxt = document.getElementById('speedTxt');
+  const notchTxt = document.getElementById('notchTxt');
+  const notchDisplay = document.getElementById('notchDisplay');
+  const distEl = document.getElementById('dist');
+  const notice = document.getElementById('notice');
+  const doorTxt = document.getElementById('doorTxt');
+  const doorBlocks = document.getElementById('doorBlocks');
+  const brakeBar = document.getElementById('brakeBar');
+  const leverSlot = document.getElementById('leverSlot');
+  const leverHandle = document.getElementById('leverHandle');
+
+  function buildTicks(containerId, max, nums){
+    const c=document.getElementById(containerId);
+    for(let i=0;i<=40;i++){
+      const t=document.createElement('div');
+      t.className='tick '+(i%5===0?'major':'');
+      t.style.transform=`rotate(${-130+i*(260/40)}deg)`;
+      c.appendChild(t);
+    }
+    nums.forEach(([n,ang])=>{
+      const span=document.createElement('span'); span.className='num'; span.textContent=n;
+      const r=39, rad=(ang-90)*Math.PI/180;
+      span.style.left=(50+Math.cos(rad)*r)+'%'; span.style.top=(50+Math.sin(rad)*r)+'%';
+      c.appendChild(span);
+    });
+  }
+  buildTicks('speedTicks',160, [[0,230],[40,282],[80,334],[120,26],[160,78]]);
+  buildTicks('pressureTicks',1000, [[0,230],[200,282],[400,334],[600,26],[800,78],[1000,130]]);
+
+  for(let i=0;i<10;i++){ const s=document.createElement('span'); s.textContent='閉'; s.className='open'; doorBlocks.appendChild(s); }
+  for(let i=0;i<8;i++){ const b=document.createElement('i'); if(i<0)b.className='on'; brakeBar.appendChild(b); }
+
+  function updateLever(){
+    // notch: -8 brake to +5 power
+    const val = brake>0 ? -brake : notch;
+    const top = 50 - (val/13)*60; // brake negative -> lower, power positive -> upper
+    document.documentElement.style.setProperty('--leverTop', `${Math.max(10,Math.min(88,top))}%`);
+    if(brake>0){ notchDisplay.textContent = brake===8?'非':'B'+brake; notchTxt.textContent='ブレーキ B'+brake; }
+    else if(notch>0){ notchDisplay.textContent='P'+notch; notchTxt.textContent='P'+notch; }
+    else { notchDisplay.textContent='切'; notchTxt.textContent='切'; }
+  }
+
+  function updateDashboard(){
+    const spAng = -130 + (Math.min(speed,160)/160)*260;
+    speedNeedle.style.transform=`translate(-50%,-92%) rotate(${spAng}deg)`;
+    const pressure = brake*110 + (brake>0?120:0);
+    const prAng = -130 + (Math.min(pressure,1000)/1000)*260;
+    pressureNeedle.style.transform=`translate(-50%,-92%) rotate(${prAng}deg)`;
+    speedTxt.textContent = speed.toFixed(1);
+    distEl.textContent = Math.max(0,Math.round(distance));
+    notice.textContent = `定位置に停車してください（残り ${Math.max(0,Math.round(distance))}m）`;
+    doorTxt.textContent = doorClosed?'閉':'開';
+    doorTxt.style.color = doorClosed?'#17ff49':'#ff4a4a';
+    [...doorBlocks.children].forEach(el=>{
+      el.textContent = doorClosed?'閉':'開';
+      el.className = doorClosed?'open':'';
+    });
+    [...brakeBar.children].forEach((el,i)=>el.className = i<brake?'on':'');
+    updateLever();
+  }
+
+  function setLeverFromY(clientY){
+    const rect=leverSlot.getBoundingClientRect();
+    const p=(clientY-rect.top)/rect.height;
+    // upper = power, center = off, lower = brake
+    if(p<.42){ notch = Math.min(5, Math.max(1, Math.round((.42-p)/.32*5))); brake=0; }
+    else if(p>.55){ brake = Math.min(8, Math.max(1, Math.round((p-.55)/.38*8))); notch=0; }
+    else { notch=0; brake=0; }
+    updateDashboard();
+  }
+  let dragging=false;
+  leverSlot.addEventListener('pointerdown',e=>{dragging=true;leverSlot.setPointerCapture(e.pointerId);setLeverFromY(e.clientY)});
+  leverSlot.addEventListener('pointermove',e=>{if(dragging)setLeverFromY(e.clientY)});
+  leverSlot.addEventListener('pointerup',()=>dragging=false);
+
+  addEventListener('keydown',e=>{
+    if(e.key==='w'||e.key==='W'){notch=Math.min(5,notch+1);brake=0}
+    if(e.key==='s'||e.key==='S'){brake=Math.min(8,brake+1);notch=0}
+    if(e.key==='a'||e.key==='A'){brake=Math.max(0,brake-1)}
+    if(e.key==='d'||e.key==='D'){notch=Math.max(0,notch-1)}
+    if(e.key==='e'||e.key==='E') toggleDoor();
+    if(e.key===' ') horn();
+    updateDashboard();
+  });
+
+  function toggleDoor(){
+    if(speed>1.5 && doorClosed) return;
+    doorClosed=!doorClosed;
+    if(!doorClosed){ notch=0; brake=Math.max(brake,3); }
+    updateDashboard();
+  }
+  function horn(){ notice.textContent='警笛：ファーン'; setTimeout(updateDashboard,700); }
+  function emergency(){ brake=8; notch=0; updateDashboard(); }
+
+  const safeClick = (id, fn) => { const el=document.getElementById(id); if(el) el.onclick=fn; };
+  safeClick('doorBtn', toggleDoor);
+  safeClick('hornBtn', horn);
+  safeClick('emgBtn', emergency);
+  safeClick('doorBtn2', toggleDoor);
+  safeClick('hornBtn2', horn);
+  safeClick('emgBtn2', emergency);
+  document.getElementById('emgSmall').onclick=emergency;
+  safeClick('pauseBtn',()=>{paused=!paused;document.getElementById('pauseBtn').classList.toggle('active',paused)});
+  const openSettings=()=>showModal('設定', '<p>画質：高 / 雨量：標準 / 視点：運転台カメラ</p><p>今後ここに画質・天候・操作感度を追加できます。</p>');
+  const openRoute=()=>showModal('路線図', '<div class="routeMap"><b>駒野</b><div class="routeLine"></div><b>新宿</b></div><p>駒野 → 高田馬場 → 新大久保 → 新宿 → 代々木</p>');
+  let cameraHudVisible = true;
+  const toggleCameraHud=()=>{
+    cameraHudVisible = !cameraHudVisible;
+    ['rightInfo','notice','stationPanel'].forEach(id=>{ const el=document.getElementById(id); if(el) el.style.display = cameraHudVisible ? '' : 'none'; });
+    const cam=document.querySelector('.cameraMini'); if(cam) cam.style.display = cameraHudVisible ? '' : 'none';
+    const b=document.getElementById('cameraBtn2'); if(b) b.classList.toggle('active', !cameraHudVisible);
+  };
+  safeClick('settingsBtn', openSettings);
+  safeClick('settingsBtn2', openSettings);
+  safeClick('routeBtn', openRoute);
+  safeClick('routeBtn2', openRoute);
+  safeClick('cameraBtn', toggleCameraHud);
+  safeClick('cameraBtn2', toggleCameraHud);
+  document.getElementById('closeModal').onclick=()=>document.getElementById('modal').classList.remove('show');
+  function showModal(title, body){
+    document.getElementById('modalContent').innerHTML='<h2>'+title+'</h2>'+body;
+    document.getElementById('modal').classList.add('show');
+  }
+
+  let last = performance.now();
+  function animate(now){
+    requestAnimationFrame(animate);
+    const dt = Math.min(.05,(now-last)/1000); last=now;
+    if(!paused){
+      const accel = doorClosed ? notch*0.72 : 0;
+      const decel = brake*1.35 + speed*.012;
+      speed += (accel - decel) * dt;
+      speed = Math.max(0, Math.min(maxSpeed, speed));
+      const dz = speed * dt * .62;
+      distance -= dz;
+      if(distance < 80 && speed > 35 && brake < 2){ notice.textContent = '駅接近：ブレーキを使用してください'; }
+      if(distance <= 0 && speed < 1.5 && !stationStopDone){
+        stationStopDone = true;
+        notch = 0; brake = 3; doorClosed = false;
+        notice.textContent = '停車しました。ドアを開けました';
+        setTimeout(()=>{ distance = 790; stationStopDone=false; doorClosed=true; }, 4500);
+      }
+      world.position.z += dz;
+      // no short visual loop: the route is long and scenery changes by zone
+      // fixed viewpoint, only slight natural vibration
+      camera.position.x = Math.sin(now*.0017)*0.018*(speed/60);
+      camera.position.y = 2.55 + Math.sin(now*.006)*0.006*(speed/80);
+      camera.lookAt(Math.sin(now*.0004)*0.18, 1.18, -95);
+    }
+    updateDashboard();
+    renderer.render(scene,camera);
+  }
+  requestAnimationFrame(animate);
+
+  addEventListener('resize',()=>{
+    camera.aspect=innerWidth/innerHeight;camera.updateProjectionMatrix();
+    renderer.setSize(innerWidth,innerHeight);
+  });
+})();
+</script>
+</body>
+</html>
