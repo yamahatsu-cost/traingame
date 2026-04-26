@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width,initial-scale=1.0,maximum-scale=1.0,user-scalable=no" />
-<title>Three.js 電車運転シミュレーター 基礎画面 v2</title>
+<title>電車運転シミュレーター 完全リアル統合版 v1</title>
 <style>
   :root{
     --panel:#090b0d;
@@ -108,6 +108,9 @@
   .stationRow.active{color:#fff;font-weight:700}
   .stationRow.active .stationDot{background:#f3d442;box-shadow:0 0 8px #ffe66a}
   .cameraMini{top:8px;left:156px;width:120px;padding:5px 8px;font-size:12px}
+  .routeStatus{left:286px;top:8px;width:280px;padding:6px 10px;font-size:12px;line-height:1.5}
+  .routeStatus .warn{color:#ffdc4a;font-weight:700}
+  .routeStatus .danger{color:#ff4a4a;font-weight:700}
 
   /* dashboard */
   .dashboard{
@@ -291,6 +294,7 @@
     .meter{transform:none !important}
     .dashboard{height:46vh;padding-left:5.8vw;padding-bottom:4.8vh;grid-template-columns:70px 14.5vw 21vw 11vw 22vw 12vw;gap:.55vw}
     .leftMenu,.cameraMini{display:none}
+    .routeStatus{left:8px;top:8px;width:230px;font-size:11px}
     .rightInfo{width:170px;font-size:12px}.rightInfo .big{font-size:20px}
     .stationPanel{width:170px;font-size:10px;right:6px;top:292px;bottom:auto}
     .topNotice{left:20%;right:20%;font-size:14px}
@@ -336,6 +340,11 @@
     <div class="stationRow"><span class="stationDot"></span><span>新大久保（JB-09）</span><span>11:43着</span></div>
     <div class="stationRow"><span class="stationDot"></span><span>新宿（JB-10）</span><span>11:46着</span></div>
     <div class="stationRow"><span class="stationDot"></span><span>代々木（JB-11）</span><span>11:48着</span></div>
+  </div>
+
+  <div class="hud routeStatus" id="routeStatus">
+    <div><b>制限</b> <span id="limitTxt">80</span> km/h　<b>信号</b> <span id="signalTxt">進行</span></div>
+    <div id="atsTxt">ATS: 監視中（介入なし）</div>
   </div>
 
   <div class="dashboard">
@@ -431,7 +440,7 @@
       </div>
       <div class="leverScaleRight"><span>5</span><span>4</span><span>3</span><span>2</span><span>1</span></div>
       <div class="notchDisplay" id="notchDisplay">切</div>
-      <div class="leverHelp">ドラッグ / W・Sキー</div>
+      <div class="leverHelp">ドラッグ / ↑↓キー・W/S</div>
     </section>
   </div>
 
@@ -595,26 +604,58 @@
 
   function addWires(){
     for(let x of [-1.3,0,1.3]){
-      const pts=[]; for(let z=40;z>-1900;z-=40) pts.push(new THREE.Vector3(x,6.1,z));
+      const pts=[]; for(let z=40;z>-5600;z-=40) pts.push(new THREE.Vector3(x,6.1,z));
       world.add(new THREE.Line(new THREE.BufferGeometry().setFromPoints(pts), mat.wire));
     }
     for(let x of [-5.2,5.2]){
-      const pts=[]; for(let z=40;z>-1900;z-=40) pts.push(new THREE.Vector3(x,5.6,z));
+      const pts=[]; for(let z=40;z>-5600;z-=40) pts.push(new THREE.Vector3(x,5.6,z));
       world.add(new THREE.Line(new THREE.BufferGeometry().setFromPoints(pts), mat.wire));
     }
   }
 
   function addBuilding(side, z, zone){
-    const isTown = zone==='town' || zone==='station';
-    const w = isTown ? 4 + Math.random()*5 : 3 + Math.random()*4;
-    const h = zone==='city' ? 16 + Math.random()*22 : isTown ? 7 + Math.random()*15 : 4 + Math.random()*8;
-    const d = 8 + Math.random()*14;
+    if(zone==='rural' || zone==='mountain'){
+      const houseMat = new THREE.MeshStandardMaterial({color:[0xd6c6aa,0xc9d0c4,0xb9aa96,0xe0ded5][Math.floor(Math.random()*4)], roughness:.86});
+      const w=2.8+Math.random()*2.2, h=2.2+Math.random()*2.0, d=3.2+Math.random()*3.5;
+      const house = new THREE.Mesh(new THREE.BoxGeometry(w,h,d), houseMat);
+      house.position.set(side*(11+Math.random()*10), h/2-.22, z+(Math.random()-.5)*20);
+      world.add(house);
+      const roof = new THREE.Mesh(new THREE.BoxGeometry(w*1.12,.32,d*1.12), new THREE.MeshStandardMaterial({color:0x5d5f63,roughness:.75}));
+      roof.position.set(house.position.x,h+.02,house.position.z); roof.rotation.z=side*.08; world.add(roof);
+      if(Math.random()<.75){
+        const field = new THREE.Mesh(new THREE.BoxGeometry(6+Math.random()*8,.025,9+Math.random()*12), new THREE.MeshStandardMaterial({color:0x4f7f3a,roughness:.95}));
+        field.position.set(side*(16+Math.random()*10),.02,z+(Math.random()-.5)*24); world.add(field);
+        for(let i=0;i<5;i++){
+          const furrow = new THREE.Mesh(new THREE.BoxGeometry(.05,.03,field.geometry.parameters.depth*.86), new THREE.MeshBasicMaterial({color:0x2a4b25}));
+          furrow.position.set(field.position.x-2+i, .05, field.position.z); world.add(furrow);
+        }
+      }
+      return;
+    }
+    const isTown = zone==='town' || zone==='station' || zone==='residential';
+    const w = zone==='city' ? 5 + Math.random()*8 : isTown ? 4 + Math.random()*5 : 3 + Math.random()*4;
+    const h = zone==='city' ? 18 + Math.random()*32 : isTown ? 7 + Math.random()*15 : 4 + Math.random()*8;
+    const d = zone==='city' ? 10 + Math.random()*18 : 8 + Math.random()*14;
     const b = new THREE.Mesh(new THREE.BoxGeometry(w,h,d), buildingMats[Math.floor(Math.random()*buildingMats.length)]);
     const setback = zone==='elevated' ? 15 + Math.random()*10 : 10 + Math.random()*10;
     b.position.set(side*setback, h/2-0.28, z + (Math.random()-.5)*16);
     b.rotation.y = side*(Math.random()*.05);
     b.castShadow=true; b.receiveShadow=true; world.add(b);
-    // balcony / shop bands
+    const floors = Math.min(10, Math.floor(h/3));
+    for(let f=1; f<floors; f++){
+      if(Math.random()<.75){
+        const band = new THREE.Mesh(new THREE.BoxGeometry(w*1.04,.045,d*1.03), new THREE.MeshStandardMaterial({color:0xdfe8ea,roughness:.42,metalness:.08}));
+        band.position.set(b.position.x, f*3.0, b.position.z); world.add(band);
+      }
+    }
+    if(Math.random()<.65){
+      const shop = new THREE.Mesh(new THREE.BoxGeometry(w*1.02,.65,d*1.04), new THREE.MeshStandardMaterial({color:[0x555555,0x777777,0x999999,0x333333][Math.floor(Math.random()*4)],roughness:.85,metalness:.04}));
+      shop.position.set(b.position.x,1.25,b.position.z-side*d*.52); world.add(shop);
+    }
+    if(Math.random()<.55){
+      const logo = new THREE.Mesh(new THREE.BoxGeometry(w*.42,.55,.08), new THREE.MeshBasicMaterial({color:0xffffff}));
+      logo.position.set(b.position.x-side*w*.18, h*.78, b.position.z-side*d*.53); world.add(logo);
+    }
     if(Math.random()<.55){
       const band = new THREE.Mesh(new THREE.BoxGeometry(w*1.03,.08,d*1.02), new THREE.MeshStandardMaterial({color:0x3d4448,roughness:.75}));
       band.position.set(b.position.x, Math.min(h-1, 2.8+Math.random()*3), b.position.z);
@@ -651,8 +692,11 @@
     else if(routeZ < 360) zone = 'residential';
     else if(routeZ < 620) zone = 'station';
     else if(routeZ < 900) zone = 'elevated';
-    else if(routeZ < 1250) zone = 'suburb';
-    else zone = 'city';
+    else if(routeZ < 1450) zone = 'suburb';
+    else if(routeZ < 2200) zone = 'city';
+    else if(routeZ < 3200) zone = 'residential';
+    else if(routeZ < 4300) zone = 'rural';
+    else zone = 'mountain';
 
     [-1,1].forEach(side=>addRoadAndFence(side,z,zone));
 
@@ -765,17 +809,123 @@
   }
 
   function addTrainOnOppositeTrack(zStart,length,side=1,stripe='green'){
+    // 対向列車はホーム内にめり込まないよう、車体幅を抑え、線路中心へ正確に配置
     const stripeMat = stripe==='pink'?mat.trainStripePink:stripe==='blue'?mat.trainStripeBlue:mat.trainStripeGreen;
+    const trackX = side*3.4;
     for(let c=0;c<4;c++){
-      const zc = zStart-20-c*17;
-      const car = new THREE.Mesh(new THREE.BoxGeometry(2.7,2.55,16), mat.trainBody);
-      car.position.set(side*3.4,1.32,zc); world.add(car);
-      const st = new THREE.Mesh(new THREE.BoxGeometry(2.75,.22,15.6), stripeMat);
-      st.position.set(side*3.4,1.45,zc); world.add(st);
+      const zc = zStart-34-c*17;
+      const car = new THREE.Mesh(new THREE.BoxGeometry(2.18,2.46,15.2), mat.trainBody);
+      car.position.set(trackX,1.30,zc); world.add(car);
+      const face = new THREE.Mesh(new THREE.BoxGeometry(2.12,1.28,.16), new THREE.MeshBasicMaterial({color:0x20272b}));
+      face.position.set(trackX,1.72,zc+7.68); world.add(face);
+      const st = new THREE.Mesh(new THREE.BoxGeometry(2.2,.22,14.8), stripeMat);
+      st.position.set(trackX,1.43,zc); world.add(st);
       for(let i=0;i<6;i++){
-        const win = new THREE.Mesh(new THREE.BoxGeometry(2.78,.42,.9), new THREE.MeshBasicMaterial({color:0x1b2830}));
-        win.position.set(side*3.4,1.92,zc-6+i*1.9); world.add(win);
+        const win = new THREE.Mesh(new THREE.BoxGeometry(2.22,.40,.86), new THREE.MeshBasicMaterial({color:0x1b2830}));
+        win.position.set(trackX,1.88,zc-5.6+i*1.85); world.add(win);
       }
+    }
+  }
+
+  function addStopPositionMarker(z, side=1){
+    // ホーム奥側の停止位置。進行方向から見えるように線路上の黄色停止線と縦の目標板を設置
+    const line = new THREE.Mesh(new THREE.BoxGeometry(2.7,.055,.26), new THREE.MeshBasicMaterial({color:0xffe100}));
+    line.position.set(0,.37,z); world.add(line);
+    const redCenter = new THREE.Mesh(new THREE.BoxGeometry(.12,1.05,.12), new THREE.MeshBasicMaterial({color:0xff3333}));
+    redCenter.position.set(0,.9,z+.02); world.add(redCenter);
+
+    // ホーム端に立つ停止位置標識
+    const post = new THREE.Mesh(new THREE.BoxGeometry(.08,1.45,.08), mat.pole);
+    post.position.set(side*3.15,1.02,z+.45); world.add(post);
+    const board = new THREE.Mesh(new THREE.BoxGeometry(.78,.52,.06), new THREE.MeshBasicMaterial({color:0xffe100}));
+    board.position.set(side*3.15,1.84,z+.45); world.add(board);
+    const mark = new THREE.Mesh(new THREE.BoxGeometry(.50,.13,.07), new THREE.MeshBasicMaterial({color:0x111111}));
+    mark.position.set(side*3.15,1.84,z+.41); world.add(mark);
+
+    // ホーム先端であることが分かる短いエンドフェンス
+    [-1,1].forEach(sg=>{
+      const fence = new THREE.Mesh(new THREE.BoxGeometry(.12,.75,2.2), new THREE.MeshStandardMaterial({color:0xd8d8d0,roughness:.65}));
+      fence.position.set(sg*3.38,.98,z-1.1); world.add(fence);
+    });
+  }
+
+  const crossingFlashMats = [];
+
+  function addLevelCrossing(z){
+    // 運転台から見た踏切：道路が線路を横切り、遮断桿は道路側を塞ぐ向きで配置する
+    const road = new THREE.Mesh(new THREE.BoxGeometry(18,.055,4.8), new THREE.MeshStandardMaterial({color:0x4a4d4d,roughness:.88}));
+    road.position.set(0,.105,z); world.add(road);
+    const rubber = new THREE.Mesh(new THREE.BoxGeometry(5.4,.065,2.15), new THREE.MeshStandardMaterial({color:0x222222,roughness:.75}));
+    rubber.position.set(0,.145,z); world.add(rubber);
+    [-3.4,0,3.4].forEach(tx=>{
+      const deck = new THREE.Mesh(new THREE.BoxGeometry(2.45,.055,1.6), new THREE.MeshStandardMaterial({color:0x3d3a32,roughness:.8}));
+      deck.position.set(tx,.19,z); world.add(deck);
+    });
+
+    [-1,1].forEach(side=>{
+      const base = new THREE.Mesh(new THREE.BoxGeometry(.55,.35,.55), new THREE.MeshStandardMaterial({color:0x1e1e1e,roughness:.65}));
+      base.position.set(side*6.55,.28,z-1.45); world.add(base);
+      const mast = new THREE.Mesh(new THREE.CylinderGeometry(.08,.10,3.0,12), new THREE.MeshStandardMaterial({color:0x202020,roughness:.55}));
+      mast.position.set(side*6.55,1.75,z-1.45); world.add(mast);
+
+      const armGroup = new THREE.Group();
+      const armYellow = new THREE.Mesh(new THREE.BoxGeometry(4.4,.10,.10), new THREE.MeshStandardMaterial({color:0xf2c600,roughness:.5}));
+      armYellow.position.set(side*-1.9,0,0); armGroup.add(armYellow);
+      for(let i=0;i<4;i++){
+        const stripe = new THREE.Mesh(new THREE.BoxGeometry(.36,.112,.112), new THREE.MeshBasicMaterial({color:0x111111}));
+        stripe.position.set(side*(-.6-i*.85),0,.006); armGroup.add(stripe);
+      }
+      armGroup.position.set(side*6.35,1.15,z-1.45);
+      armGroup.rotation.z = side*Math.PI;
+      world.add(armGroup);
+
+      const cross1 = new THREE.Mesh(new THREE.BoxGeometry(1.00,.12,.08), new THREE.MeshBasicMaterial({color:0xffcc00}));
+      cross1.position.set(side*6.55,2.95,z-1.45); cross1.rotation.z=.72; world.add(cross1);
+      const cross2 = new THREE.Mesh(new THREE.BoxGeometry(1.00,.12,.08), new THREE.MeshBasicMaterial({color:0xffcc00}));
+      cross2.position.set(side*6.55,2.95,z-1.45); cross2.rotation.z=-.72; world.add(cross2);
+      const lampBox = new THREE.Mesh(new THREE.BoxGeometry(.72,.34,.12), new THREE.MeshBasicMaterial({color:0x111111}));
+      lampBox.position.set(side*6.48,2.42,z-1.70); world.add(lampBox);
+      const m1 = new THREE.MeshBasicMaterial({color:0x330000});
+      const m2 = new THREE.MeshBasicMaterial({color:0x330000});
+      const l1 = new THREE.Mesh(new THREE.SphereGeometry(.13,16,10), m1);
+      const l2 = new THREE.Mesh(new THREE.SphereGeometry(.13,16,10), m2);
+      l1.position.set(side*6.33,2.42,z-1.78); l2.position.set(side*6.63,2.42,z-1.78);
+      world.add(l1,l2);
+      crossingFlashMats.push([m1,m2]);
+
+      const warning = new THREE.Mesh(new THREE.BoxGeometry(.70,.22,.06), new THREE.MeshBasicMaterial({color:0xffdd22}));
+      warning.position.set(side*6.55,2.05,z-1.76); world.add(warning);
+    });
+  }
+
+  function addTrussRailBridge(zStart, length=92){
+    // 屋根の低い箱型ではなく、運転席視点で十分な高さがあるトラス鉄橋
+    const zMid=zStart-length/2;
+    const bridgeMat = new THREE.MeshStandardMaterial({color:0x8b3a2e,roughness:.62,metalness:.18});
+    const deck = new THREE.Mesh(new THREE.BoxGeometry(8,.24,length), mat.bridge);
+    deck.position.set(0,.12,zMid); world.add(deck);
+
+    [-4.25,4.25].forEach(x=>{
+      const lowerBeam=new THREE.Mesh(new THREE.BoxGeometry(.28,.28,length), bridgeMat);
+      lowerBeam.position.set(x,1.05,zMid); world.add(lowerBeam);
+      const upperBeam=new THREE.Mesh(new THREE.BoxGeometry(.30,.30,length), bridgeMat);
+      upperBeam.position.set(x,5.95,zMid); world.add(upperBeam);
+      for(let i=0;i<10;i++){
+        const zz=zStart-6-i*(length-12)/9;
+        const upright=new THREE.Mesh(new THREE.BoxGeometry(.22,5.15,.22), bridgeMat);
+        upright.position.set(x,3.45,zz); world.add(upright);
+        const diag1=new THREE.Mesh(new THREE.BoxGeometry(.16,5.3,.16), bridgeMat);
+        diag1.position.set(x,3.45,zz-2.4); diag1.rotation.x=.68; world.add(diag1);
+      }
+    });
+    for(let i=0;i<8;i++){
+      const zz=zStart-8-i*(length-16)/7;
+      const top=new THREE.Mesh(new THREE.BoxGeometry(8.7,.22,.22), bridgeMat);
+      top.position.set(0,6.15,zz); world.add(top);
+      const crossA=new THREE.Mesh(new THREE.BoxGeometry(9.0,.16,.16), bridgeMat);
+      crossA.position.set(0,5.75,zz-2.1); crossA.rotation.z=.45; world.add(crossA);
+      const crossB=new THREE.Mesh(new THREE.BoxGeometry(9.0,.16,.16), bridgeMat);
+      crossB.position.set(0,5.75,zz+2.1); crossB.rotation.z=-.45; world.add(crossB);
     }
   }
 
@@ -784,25 +934,28 @@
     for(let i=0;i<9;i++){
       const z=zStart-14-i*(length-28)/8;
       const col=new THREE.Mesh(new THREE.CylinderGeometry(.12,.12,2.7,14), pillarMat);
-      col.position.set(side*5.25,1.55,z); world.add(col);
+      col.position.set(side*6.05,1.55,z); world.add(col);
       if(variant==='terminal'){
         const base=new THREE.Mesh(new THREE.CylinderGeometry(.32,.36,.18,16), mat.concrete);
-        base.position.set(side*5.25,.86,z); world.add(base);
+        base.position.set(side*6.05,.86,z); world.add(base);
       }
     }
     for(let i=0;i<5;i++){
       const z = zStart-22-i*(length-44)/4;
       const bench = new THREE.Mesh(new THREE.BoxGeometry(1.15,.25,.35), new THREE.MeshStandardMaterial({color:0x56606a,roughness:.7}));
-      bench.position.set(side*5.45,.93,z); world.add(bench);
+      bench.position.set(side*6.25,.93,z); world.add(bench);
       const board = new THREE.Mesh(new THREE.BoxGeometry(.95,1.15,.08), mat.adPanel);
-      board.position.set(side*6.08,1.55,z-4); board.rotation.y = side*Math.PI/2; world.add(board);
+      board.position.set(side*6.95,1.55,z-4); board.rotation.y = side*Math.PI/2; world.add(board);
     }
-    addStationSign(side*5.0,2.25,zStart-length*.45);
-    addHangingBoard(side*4.7,zStart-length*.27, variant==='terminal'?0xffdd22:0xffffff);
+    addStationSign(side*5.9,2.25,zStart-length*.45);
+    addHangingBoard(side*5.65,zStart-length*.27, variant==='terminal'?0xffdd22:0xffffff);
   }
 
   function addStation(zStart, length=190, variant='local'){
     const zMid = zStart - length/2;
+    // 停止位置はホーム入口側ではなく、進行方向のホーム奥側（最先端）へ配置
+    const stopZ = zStart - length + 12;
+    addStopPositionMarker(stopZ, 1);
     const roofHigh = variant==='terminal' ? 3.7 : variant==='subway' ? 3.35 : 3.15;
     const platformW = variant==='terminal' ? 3.4 : 2.6;
     const roofW = variant==='terminal' ? 4.7 : variant==='subway' ? 4.2 : 3.3;
@@ -814,34 +967,34 @@
 
     [-1,1].forEach(side=>{
       const platform = new THREE.Mesh(new THREE.BoxGeometry(platformW,.55,length), variant==='subway'?mat.platformTile:mat.platform);
-      platform.position.set(side*4.85,.30,zMid); platform.receiveShadow=true; world.add(platform);
+      platform.position.set(side*6.05,.30,zMid); platform.receiveShadow=true; world.add(platform);
 
       const edge = new THREE.Mesh(new THREE.BoxGeometry(.25,.085,length), mat.yellowTile);
-      edge.position.set(side*3.47,.63,zMid); world.add(edge);
+      edge.position.set(side*4.72,.63,zMid); world.add(edge);
       const whiteLine = new THREE.Mesh(new THREE.BoxGeometry(.08,.09,length*.92), new THREE.MeshStandardMaterial({color:0xe2e2dc,roughness:.8}));
-      whiteLine.position.set(side*3.18,.64,zMid); world.add(whiteLine);
+      whiteLine.position.set(side*4.98,.64,zMid); world.add(whiteLine);
 
       const wallH = variant==='subway' ? 2.4 : 1.25;
       const wallMat = variant==='subway' ? mat.darkWall : mat.concrete;
       const wall = new THREE.Mesh(new THREE.BoxGeometry(.22,wallH,length), wallMat);
-      wall.position.set(side*6.25,wallH/2+.35,zMid); world.add(wall);
+      wall.position.set(side*7.55,wallH/2+.35,zMid); world.add(wall);
 
       if(variant==='subway'){
         const ceiling=new THREE.Mesh(new THREE.BoxGeometry(6.2,.18,length), roofMat);
-        ceiling.position.set(side*4.85,3.55,zMid); world.add(ceiling);
+        ceiling.position.set(side*6.05,3.55,zMid); world.add(ceiling);
         for(let i=0;i<8;i++){
           const light = new THREE.Mesh(new THREE.BoxGeometry(.12,.05,7.5), new THREE.MeshBasicMaterial({color:0xf7f4d0}));
-          light.position.set(side*4.15,3.42,zStart-20-i*(length-40)/7); world.add(light);
+          light.position.set(side*5.35,3.42,zStart-20-i*(length-40)/7); world.add(light);
         }
       }else{
         const roof=new THREE.Mesh(new THREE.BoxGeometry(roofW,.16,length*.9), roofMat);
-        roof.position.set(side*5.05,roofHigh,zMid);
+        roof.position.set(side*6.15,roofHigh,zMid);
         roof.rotation.z=side*(variant==='terminal'?.08:.04);
         world.add(roof);
         if(variant==='local'){
           for(let i=0;i<8;i++){
             const stripe=new THREE.Mesh(new THREE.BoxGeometry(roofW,.02,.32), new THREE.MeshBasicMaterial({color:0x2e8e51}));
-            stripe.position.set(side*5.05,roofHigh+.09,zStart-18-i*(length-36)/7);
+            stripe.position.set(side*6.15,roofHigh+.09,zStart-18-i*(length-36)/7);
             stripe.rotation.z=roof.rotation.z;
             world.add(stripe);
           }
@@ -861,9 +1014,9 @@
       [-1,1].forEach(side=>{
         for(let i=0;i<12;i++){
           const gate=new THREE.Mesh(new THREE.BoxGeometry(.08,.9,1.0), new THREE.MeshStandardMaterial({color:0xf0f0e8,roughness:.6}));
-          gate.position.set(side*3.52,1.15,zStart-16-i*(length-32)/11); world.add(gate);
+          gate.position.set(side*4.70,1.15,zStart-16-i*(length-32)/11); world.add(gate);
           const red=new THREE.Mesh(new THREE.BoxGeometry(.09,.12,.7), new THREE.MeshBasicMaterial({color:0xe73b32}));
-          red.position.set(side*3.50,1.3,zStart-16-i*(length-32)/11); world.add(red);
+          red.position.set(side*4.68,1.3,zStart-16-i*(length-32)/11); world.add(red);
         }
       });
     }
@@ -880,7 +1033,7 @@
       const side = Math.random()<.5 ? -1 : 1;
       const coat = [0x222222,0x303846,0x5b4638,0x14345c][Math.floor(Math.random()*4)];
       const body = new THREE.Mesh(new THREE.CylinderGeometry(.12,.17,.9,8), new THREE.MeshStandardMaterial({color:coat,roughness:.8}));
-      body.position.set(side*(4.55+Math.random()*1.1),1.15,zStart-18-Math.random()*(length-36)); world.add(body);
+      body.position.set(side*(5.35+Math.random()*1.1),1.15,zStart-18-Math.random()*(length-36)); world.add(body);
       const head = new THREE.Mesh(new THREE.SphereGeometry(.15,10,8), new THREE.MeshStandardMaterial({color:0xc49a78,roughness:.7}));
       head.position.set(body.position.x,1.72,body.position.z); world.add(head);
     }
@@ -889,8 +1042,90 @@
     if(variant==='subway') addTrainOnOppositeTrack(zStart-60,length,-1,'blue');
   }
 
-  // Long non-repeating route: city -> residential -> station -> elevated -> suburb -> city
-  for(let z=20; z>-1850; z-=34){
+
+  function addSwitchAndBranch(z, dir=1){
+    const railMat = new THREE.LineBasicMaterial({color:0x5a4738});
+    [-.82,.82].forEach(rx=>{
+      const pts=[];
+      for(let i=0;i<28;i++){
+        const t=i/27;
+        pts.push(new THREE.Vector3(rx + dir*(t*t*5.2), .34, z - t*95));
+      }
+      world.add(new THREE.Line(new THREE.BufferGeometry().setFromPoints(pts), railMat));
+    });
+    for(let i=0;i<18;i++){
+      const t=i/17;
+      const sl = new THREE.Mesh(new THREE.BoxGeometry(2.1,.09,.16), mat.sleeper);
+      sl.position.set(dir*(t*t*5.2), .075, z-t*90);
+      sl.rotation.y = -dir*t*.32;
+      world.add(sl);
+    }
+    const point = new THREE.Mesh(new THREE.BoxGeometry(.12,.06,3.6), new THREE.MeshBasicMaterial({color:0xb8b0a6}));
+    point.position.set(dir*.35,.38,z-5); point.rotation.y=-dir*.25; world.add(point);
+    const box = new THREE.Mesh(new THREE.BoxGeometry(.55,.55,.38), new THREE.MeshStandardMaterial({color:0xd9d9d0,roughness:.75}));
+    box.position.set(dir*2.3,.42,z-9); world.add(box);
+  }
+
+  function addCurvedTrackGuide(zStart, length=240, dir=1){
+    const curveMat = new THREE.LineBasicMaterial({color:0x4d3d31});
+    [-.82,.82,2.58,4.22,-2.58,-4.22].forEach(rx=>{
+      const pts=[];
+      for(let i=0;i<72;i++){
+        const t=i/71;
+        const x=rx + dir*Math.sin(t*Math.PI/2)*2.9;
+        pts.push(new THREE.Vector3(x,.36,zStart-t*length));
+      }
+      world.add(new THREE.Line(new THREE.BufferGeometry().setFromPoints(pts), curveMat));
+    });
+    for(let i=0;i<36;i++){
+      const t=i/35;
+      const sl = new THREE.Mesh(new THREE.BoxGeometry(2.25,.08,.16), mat.sleeper);
+      sl.position.set(dir*Math.sin(t*Math.PI/2)*2.9,.08,zStart-t*length);
+      sl.rotation.y = -dir*.25*t;
+      world.add(sl);
+    }
+  }
+
+  function addYardTracks(zStart){
+    for(let n=0;n<4;n++){
+      const x=7.5+n*2.15;
+      for(let zz=zStart; zz>zStart-220; zz-=34) addTrackSegment(zz,x);
+      const bumper = new THREE.Mesh(new THREE.BoxGeometry(2.2,.65,.35), new THREE.MeshStandardMaterial({color:0x6f2b25,roughness:.7}));
+      bumper.position.set(x,.45,zStart-226); world.add(bumper);
+    }
+  }
+
+  function addStationDetailSet(zStart,length,variant){
+    [-1,1].forEach(side=>{
+      for(let i=0;i<16;i++){
+        const z=zStart-12-i*(length-24)/15;
+        const gate = new THREE.Mesh(new THREE.BoxGeometry(.12,.78,1.05), new THREE.MeshStandardMaterial({color:0xe8e8e3,roughness:.62}));
+        gate.position.set(side*4.58,1.05,z); world.add(gate);
+        const blue = new THREE.Mesh(new THREE.BoxGeometry(.13,.10,.82), new THREE.MeshBasicMaterial({color:0x1e72ff}));
+        blue.position.set(side*4.56,1.34,z); world.add(blue);
+      }
+      for(let i=0;i<3;i++){
+        const z=zStart-36-i*(length-72)/2;
+        const board = new THREE.Mesh(new THREE.BoxGeometry(2.2,.72,.10), new THREE.MeshBasicMaterial({color:0x151515}));
+        board.position.set(side*5.25,2.85,z); board.rotation.y=side*Math.PI/2; world.add(board);
+        for(let r=0;r<3;r++){
+          const txt = new THREE.Mesh(new THREE.BoxGeometry(1.55,.055,.11), new THREE.MeshBasicMaterial({color:r===0?0xffa000:0x9bff56}));
+          txt.position.set(side*5.19,2.98-r*.18,z); txt.rotation.y=side*Math.PI/2; world.add(txt);
+        }
+        const clock = new THREE.Mesh(new THREE.CylinderGeometry(.26,.26,.04,24), new THREE.MeshBasicMaterial({color:0x111111}));
+        clock.position.set(side*5.35,2.72,z+1.25); clock.rotation.z=Math.PI/2; world.add(clock);
+      }
+      const stair = new THREE.Mesh(new THREE.BoxGeometry(1.55,1.4,5.0), new THREE.MeshStandardMaterial({color:0xd5d8db,roughness:.7}));
+      stair.position.set(side*7.0,1.45,zStart-length*.56); stair.rotation.z=side*.45; world.add(stair);
+      const vend = new THREE.Mesh(new THREE.BoxGeometry(.65,1.45,.48), new THREE.MeshBasicMaterial({color:0xffffff}));
+      vend.position.set(side*6.75,1.35,zStart-length*.33); world.add(vend);
+      const vendFace = new THREE.Mesh(new THREE.BoxGeometry(.66,.18,.50), new THREE.MeshBasicMaterial({color:0x1e72ff}));
+      vendFace.position.set(side*6.75,1.62,zStart-length*.33); world.add(vendFace);
+    });
+  }
+
+  // Long non-repeating route: city -> residential -> station -> elevated -> suburb -> rural -> mountain
+  for(let z=20; z>-5400; z-=34){
     addBallast(z);
     addTrackSegment(z,0);
     addTrackSegment(z,3.4);
@@ -898,9 +1133,27 @@
     if(Math.abs(Math.round(z)) % 68 < 34) addCatenary(z);
     addSideObjects(z);
   }
-  addStation(-390, 210, 'local');
-  addStation(-820, 240, 'terminal');
-  addStation(-1280, 210, 'subway');
+  addStation(-390, 210, 'local'); addStationDetailSet(-390,210,'local');
+  addStation(-820, 240, 'terminal'); addStationDetailSet(-820,240,'terminal');
+  addStation(-1280, 210, 'subway'); addStationDetailSet(-1280,210,'subway');
+  addStation(-2380, 230, 'local'); addStationDetailSet(-2380,230,'local');
+  addStation(-3760, 190, 'local'); addStationDetailSet(-3760,190,'local');
+  addLevelCrossing(-250);
+  addLevelCrossing(-1110);
+  addLevelCrossing(-3050);
+  addLevelCrossing(-4560);
+  // 鉄橋は駅通過直後に固定せず、駅間に自然に出現させる
+  addTrussRailBridge(-1850, 100);
+  addTrussRailBridge(-3180, 115);
+  addTrussRailBridge(-4680, 120);
+  addSwitchAndBranch(-170,1);
+  addSwitchAndBranch(-720,-1);
+  addSwitchAndBranch(-1740,1);
+  addSwitchAndBranch(-2920,-1);
+  addCurvedTrackGuide(-520,260,1);
+  addCurvedTrackGuide(-1980,330,-1);
+  addCurvedTrackGuide(-3480,310,1);
+  addYardTracks(-2050);
   addWires();
 
   // distant curve markers/rails using line, subtle right curve illusion
@@ -915,9 +1168,64 @@
     world.add(new THREE.Line(new THREE.BufferGeometry().setFromPoints(pts), curveLineMat));
   }
 
-  let speed=0, notch=0, brake=0, doorClosed=true, distance=350, paused=false;
+  // ルートデータ：今後ここに街並み・駅・信号・カーブ・制限速度を追加して拡張できます。
+  // s = 起点からの距離(m)。ATSは警告のみで、強制減速・強制停止はしません。
+  const ROUTE_DATA = [
+    {s:0,    type:'start',    name:'駒野',      limit:65, signal:'進行', scene:'city'},
+    {s:180,  type:'curve',    name:'ビル街右カーブ', radius:140, dir:1,  limit:45, signal:'注意', scene:'city'},
+    {s:360,  type:'crossing', name:'第1踏切',  limit:45, signal:'注意'},
+    {s:588,  type:'station',  name:'高田馬場',  stop:true, limit:35, signal:'注意', platformDoors:true},
+    {s:820,  type:'curve',    name:'駅間左カーブ', radius:110, dir:-1, limit:55, signal:'進行'},
+    {s:1048, type:'station',  name:'新大久保',  stop:true, limit:35, signal:'注意', platformDoors:true},
+    {s:1450, type:'switch',   name:'引込分岐',  limit:35, signal:'注意'},
+    {s:1760, type:'tunnel',   name:'短いトンネル', limit:50, signal:'進行'},
+    {s:2178, type:'station',  name:'新宿',      stop:true, limit:25, signal:'停止予告', platformDoors:true},
+    {s:2720, type:'curve',    name:'都心右カーブ', radius:120, dir:1, limit:50, signal:'進行'},
+    {s:3518, type:'station',  name:'代々木',    stop:true, limit:35, signal:'注意', platformDoors:true},
+    {s:4858, type:'station',  name:'郊外駅',    stop:true, limit:45, signal:'進行', platformDoors:false}
+  ];
+  const stopDistances = ROUTE_DATA.filter(r=>r.stop).map(r=>r.s);
+  let routeS = 0;
+  let stopIndex = 0;
+  let speed=0, notch=0, brake=0, doorClosed=true, distance=stopDistances[0], paused=false;
   let stationStopDone=false;
+  let passedStopLine=false;
+  let atsWarning=false;
   const maxSpeed = 120;
+
+  function getCurrentRoutePoint(){
+    let cur = ROUTE_DATA[0];
+    for(const r of ROUTE_DATA){ if(routeS >= r.s) cur = r; else break; }
+    return cur;
+  }
+  function getNextRoutePoint(types=null){
+    return ROUTE_DATA.find(r => r.s > routeS && (!types || types.includes(r.type)));
+  }
+  function getCurrentLimit(){
+    const cur = getCurrentRoutePoint();
+    const next = getNextRoutePoint(['curve','station','switch','crossing','tunnel']);
+    let limit = cur.limit || 80;
+    if(next && next.s-routeS < 260 && next.limit) limit = Math.min(limit, next.limit);
+    return limit;
+  }
+  function getSignalText(){
+    const next = getNextRoutePoint(['station','switch','crossing']);
+    if(!next) return '進行';
+    const d = next.s-routeS;
+    if(next.type==='station' && d < 420) return d < 160 ? '注意' : '減速予告';
+    if(next.type==='switch' && d < 280) return '注意';
+    if(next.type==='crossing' && d < 220) return '注意';
+    return '進行';
+  }
+
+  function advanceToNextStop(){
+    stopIndex = Math.min(stopIndex + 1, stopDistances.length - 1);
+    distance = stopDistances[stopIndex] - routeS;
+    stationStopDone = false;
+    passedStopLine = false;
+    notice.style.color = '#eee';
+    updateDashboard();
+  }
 
   const speedNeedle = document.getElementById('speedNeedle');
   const pressureNeedle = document.getElementById('pressureNeedle');
@@ -927,6 +1235,9 @@
   const distEl = document.getElementById('dist');
   const notice = document.getElementById('notice');
   const doorTxt = document.getElementById('doorTxt');
+  const limitTxt = document.getElementById('limitTxt');
+  const signalTxt = document.getElementById('signalTxt');
+  const atsTxt = document.getElementById('atsTxt');
   const doorBlocks = document.getElementById('doorBlocks');
   const brakeBar = document.getElementById('brakeBar');
   const leverSlot = document.getElementById('leverSlot');
@@ -970,8 +1281,19 @@
     const prAng = -130 + (Math.min(pressure,1000)/1000)*260;
     pressureNeedle.style.transform=`translate(-50%,-92%) rotate(${prAng}deg)`;
     speedTxt.textContent = speed.toFixed(1);
-    distEl.textContent = Math.max(0,Math.round(distance));
-    notice.textContent = `定位置に停車してください（残り ${Math.max(0,Math.round(distance))}m）`;
+    const dRound = Math.round(distance);
+    if(distance >= 0){
+      distEl.textContent = dRound;
+      distEl.style.color = '#fff';
+      notice.style.color = '#eee';
+      notice.textContent = `定位置に停車してください（残り ${dRound}m）`;
+    }else{
+      const over = Math.abs(dRound);
+      distEl.textContent = `超過 ${over}`;
+      distEl.style.color = '#ff333b';
+      notice.style.color = '#ff333b';
+      notice.textContent = `停止位置を ${over}m 超過しています`;
+    }
     doorTxt.textContent = doorClosed?'閉':'開';
     doorTxt.style.color = doorClosed?'#17ff49':'#ff4a4a';
     [...doorBlocks.children].forEach(el=>{
@@ -979,6 +1301,22 @@
       el.className = doorClosed?'open':'';
     });
     [...brakeBar.children].forEach((el,i)=>el.className = i<brake?'on':'');
+    const limit = getCurrentLimit();
+    const sig = getSignalText();
+    atsWarning = speed > limit + 3;
+    if(limitTxt) limitTxt.textContent = limit;
+    if(signalTxt){ signalTxt.textContent = sig; signalTxt.className = sig==='進行' ? '' : 'warn'; }
+    if(atsTxt){
+      atsTxt.textContent = atsWarning ? `ATS警報：制限${limit}km/h超過。ブレーキを扱ってください（自動介入なし）` : 'ATS: 監視中（介入なし）';
+      atsTxt.className = atsWarning ? 'danger' : '';
+    }
+    if(atsWarning){
+      notice.style.color = '#ff4a4a';
+      notice.textContent = `ATS警報：制限${limit}km/h超過。ブレーキを扱ってください`;
+    }else if(sig !== '進行' && distance > 35){
+      notice.style.color = '#ffdc4a';
+      notice.textContent = `信号：${sig}　早めに減速してください`;
+    }
     updateLever();
   }
 
@@ -997,14 +1335,16 @@
   leverSlot.addEventListener('pointerup',()=>dragging=false);
 
   addEventListener('keydown',e=>{
-    if(e.key==='w'||e.key==='W'){notch=Math.min(5,notch+1);brake=0}
-    if(e.key==='s'||e.key==='S'){brake=Math.min(8,brake+1);notch=0}
-    if(e.key==='a'||e.key==='A'){brake=Math.max(0,brake-1)}
-    if(e.key==='d'||e.key==='D'){notch=Math.max(0,notch-1)}
-    if(e.key==='e'||e.key==='E') toggleDoor();
-    if(e.key===' ') horn();
+    const k=e.key;
+    if(['ArrowUp','ArrowDown','ArrowLeft','ArrowRight',' '].includes(k)) e.preventDefault();
+    if(k==='ArrowUp'||k==='w'||k==='W'){notch=Math.min(5,notch+1);brake=0}
+    if(k==='ArrowDown'||k==='s'||k==='S'){brake=Math.min(8,brake+1);notch=0}
+    if(k==='ArrowLeft'||k==='a'||k==='A'){brake=Math.max(0,brake-1)}
+    if(k==='ArrowRight'||k==='d'||k==='D'){notch=Math.max(0,notch-1)}
+    if(k==='e'||k==='E') toggleDoor();
+    if(k===' ') horn();
     updateDashboard();
-  });
+  }, {passive:false});
 
   function toggleDoor(){
     if(speed>1.5 && doorClosed) return;
@@ -1029,7 +1369,7 @@
   let cameraHudVisible = true;
   const toggleCameraHud=()=>{
     cameraHudVisible = !cameraHudVisible;
-    ['rightInfo','notice','stationPanel'].forEach(id=>{ const el=document.getElementById(id); if(el) el.style.display = cameraHudVisible ? '' : 'none'; });
+    ['rightInfo','notice','stationPanel','routeStatus'].forEach(id=>{ const el=document.getElementById(id); if(el) el.style.display = cameraHudVisible ? '' : 'none'; });
     const cam=document.querySelector('.cameraMini'); if(cam) cam.style.display = cameraHudVisible ? '' : 'none';
     const b=document.getElementById('cameraBtn2'); if(b) b.classList.toggle('active', !cameraHudVisible);
   };
@@ -1055,13 +1395,29 @@
       speed += (accel - decel) * dt;
       speed = Math.max(0, Math.min(maxSpeed, speed));
       const dz = speed * dt * .62;
-      distance -= dz;
-      if(distance < 80 && speed > 35 && brake < 2){ notice.textContent = '駅接近：ブレーキを使用してください'; }
-      if(distance <= 0 && speed < 1.5 && !stationStopDone){
+      routeS += dz;
+      distance = stopDistances[stopIndex] - routeS;
+      if(distance < 0) passedStopLine = true;
+
+      const limit = getCurrentLimit();
+      const sig = getSignalText();
+      if(speed > limit + 3){ notice.textContent = `ATS警報：制限${limit}km/h超過。ブレーキを扱ってください`; }
+      else if(sig !== '進行'){ notice.textContent = `信号：${sig}　早めに減速してください`; }
+      else if(distance < 120 && distance >= 0 && speed > 30 && brake < 2){ notice.textContent = '駅接近：ブレーキを使用してください'; }
+
+      // 駅停車は自動操作しない。停車後のドア扱い・発車はプレイヤー操作。
+      if(distance <= 6 && Math.abs(distance) <= 18 && speed < 1.5 && !stationStopDone){
         stationStopDone = true;
-        notch = 0; brake = 3; doorClosed = false;
-        notice.textContent = '停車しました。ドアを開けました';
-        setTimeout(()=>{ distance = 790; stationStopDone=false; doorClosed=true; }, 4500);
+        notch = 0;
+        notice.textContent = '停車しました。ドアを開けて乗降扱いしてください';
+      }
+      // 停車後、ドアを閉めて力行したら次駅案内へ切替
+      if(stationStopDone && doorClosed && notch > 0 && speed > 1.0){
+        advanceToNextStop();
+      }
+      // 大きく超過して走り続けた場合も次駅へ進める
+      if(passedStopLine && distance < -35 && speed > 5 && !stationStopDone){
+        advanceToNextStop();
       }
       world.position.z += dz;
       // no short visual loop: the route is long and scenery changes by zone
@@ -1070,6 +1426,11 @@
       camera.position.y = 2.55 + Math.sin(now*.006)*0.006*(speed/80);
       camera.lookAt(Math.sin(now*.0004)*0.18, 1.18, -95);
     }
+    const flashOn = Math.floor(now/420) % 2 === 0;
+    crossingFlashMats.forEach(([a,b])=>{
+      a.color.setHex(flashOn ? 0xff1b25 : 0x330000);
+      b.color.setHex(flashOn ? 0x330000 : 0xff1b25);
+    });
     updateDashboard();
     renderer.render(scene,camera);
   }
