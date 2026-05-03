@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width,initial-scale=1.0,maximum-scale=1.0,user-scalable=no" />
-<title>電車運転シミュレーター 完全リアル統合版 v1</title>
+<title>電車運転シミュレーター 軽量ストリーミング版 v1</title>
 <style>
   :root{
     --panel:#090b0d;
@@ -1592,49 +1592,116 @@
     });
   }
 
-  // Long non-repeating route: city -> residential -> station -> elevated -> suburb -> rural -> mountain
-  for(let z=20; z>-5400; z-=34){
-    addBallast(z);
-    addTrackSegment(z,0);
-    addTrackSegment(z,3.4);
-    addTrackSegment(z,-3.4);
-    if(Math.abs(Math.round(z)) % 68 < 34) addCatenary(z);
-    addSideObjects(z);
-  }
-  addStation(-390, 210, 'local'); addStationDetailSet(-390,210,'local');
-  addStation(-820, 240, 'terminal'); addStationDetailSet(-820,240,'terminal');
-  addStation(-1280, 210, 'subway'); addStationDetailSet(-1280,210,'subway');
-  addStation(-2380, 230, 'local'); addStationDetailSet(-2380,230,'local');
-  addStation(-3760, 190, 'local'); addStationDetailSet(-3760,190,'local');
-  addLevelCrossing(-250);
-  addLevelCrossing(-1110);
-  addLevelCrossing(-3050);
-  addLevelCrossing(-4560);
-  // 鉄橋は駅通過直後に固定せず、駅間に自然に出現させる
-  addTrussRailBridge(-1850, 100);
-  addTrussRailBridge(-3180, 115);
-  addTrussRailBridge(-4680, 120);
-  addSwitchAndBranch(-170,1);
-  addSwitchAndBranch(-720,-1);
-  addSwitchAndBranch(-1740,1);
-  addSwitchAndBranch(-2920,-1);
-  addCurvedTrackGuide(-520,260,1);
-  addCurvedTrackGuide(-1980,330,-1);
-  addCurvedTrackGuide(-3480,310,1);
-  addYardTracks(-2050);
-  addWires();
+  // 軽量化：全区間を最初から一括生成しない。
+  // 現在位置の少し前〜前方だけをチャンク生成し、通過済みチャンクは削除する。
+  const SCENERY_CHUNK_LENGTH = 272;
+  const SCENERY_FORWARD_DISTANCE = 980;
+  const SCENERY_BACK_DISTANCE = 170;
+  const sceneryChunks = new Map();
 
-  // distant curve markers/rails using line, subtle right curve illusion
-  const curveLineMat = new THREE.LineBasicMaterial({color:0x4d3d31});
-  for(let rx of [-.82,.82,2.58,4.22,-4.22,-2.58]){
-    const pts=[];
-    for(let i=0;i<80;i++){
-      const z=10-i*7;
-      const x=rx + Math.sin(i/22)*1.8*(i/80);
-      pts.push(new THREE.Vector3(x,.32,z));
-    }
-    world.add(new THREE.Line(new THREE.BufferGeometry().setFromPoints(pts), curveLineMat));
+  function disposeObject3D(obj){
+    obj.traverse(child=>{
+      // 共有マテリアルをdisposeすると、残っている区間まで表示崩れするため、
+      // 通過済み区間のジオメトリだけを確実に破棄する。
+      if(child.geometry) child.geometry.dispose();
+    });
   }
+
+  function withChunkGroup(group, fn){
+    const originalAdd = world.add.bind(world);
+    world.add = (...objects) => group.add(...objects);
+    try{ fn(); }
+    finally{ world.add = originalAdd; }
+  }
+
+  function addWireSegment(zStart, zEnd){
+    for(let x of [-1.3,0,1.3]){
+      const pts=[]; for(let z=zStart; z>=zEnd; z-=40) pts.push(new THREE.Vector3(x,6.1,z));
+      if(pts.length>1) world.add(new THREE.Line(new THREE.BufferGeometry().setFromPoints(pts), mat.wire));
+    }
+    for(let x of [-5.2,5.2]){
+      const pts=[]; for(let z=zStart; z>=zEnd; z-=40) pts.push(new THREE.Vector3(x,5.6,z));
+      if(pts.length>1) world.add(new THREE.Line(new THREE.BufferGeometry().setFromPoints(pts), mat.wire));
+    }
+  }
+
+  const sceneryEvents = [
+    {s:170,  fn:()=>addSwitchAndBranch(-170,1)},
+    {s:250,  fn:()=>addLevelCrossing(-250)},
+    {s:390,  fn:()=>{addStation(-390,210,'local'); addStationDetailSet(-390,210,'local');}},
+    {s:520,  fn:()=>addCurvedTrackGuide(-520,260,1)},
+    {s:720,  fn:()=>addSwitchAndBranch(-720,-1)},
+    {s:820,  fn:()=>{addStation(-820,240,'terminal'); addStationDetailSet(-820,240,'terminal');}},
+    {s:1110, fn:()=>addLevelCrossing(-1110)},
+    {s:1280, fn:()=>{addStation(-1280,210,'subway'); addStationDetailSet(-1280,210,'subway');}},
+    {s:1740, fn:()=>addSwitchAndBranch(-1740,1)},
+    {s:1850, fn:()=>addTrussRailBridge(-1850,100)},
+    {s:1980, fn:()=>addCurvedTrackGuide(-1980,330,-1)},
+    {s:2050, fn:()=>addYardTracks(-2050)},
+    {s:2380, fn:()=>{addStation(-2380,230,'local'); addStationDetailSet(-2380,230,'local');}},
+    {s:2920, fn:()=>addSwitchAndBranch(-2920,-1)},
+    {s:3050, fn:()=>addLevelCrossing(-3050)},
+    {s:3180, fn:()=>addTrussRailBridge(-3180,115)},
+    {s:3480, fn:()=>addCurvedTrackGuide(-3480,310,1)},
+    {s:3760, fn:()=>{addStation(-3760,190,'local'); addStationDetailSet(-3760,190,'local');}},
+    {s:4560, fn:()=>addLevelCrossing(-4560)},
+    {s:4680, fn:()=>addTrussRailBridge(-4680,120)}
+  ];
+
+  function generateSceneryChunk(chunkIndex){
+    if(sceneryChunks.has(chunkIndex)) return;
+    const group = new THREE.Group();
+    group.name = `scenery-chunk-${chunkIndex}`;
+    const sStart = chunkIndex * SCENERY_CHUNK_LENGTH;
+    const sEnd = sStart + SCENERY_CHUNK_LENGTH;
+
+    withChunkGroup(group, ()=>{
+      for(let s=sStart; s<sEnd; s+=34){
+        const z = -s;
+        addBallast(z);
+        addTrackSegment(z,0);
+        addTrackSegment(z,3.4);
+        addTrackSegment(z,-3.4);
+        if(Math.abs(Math.round(z)) % 68 < 34) addCatenary(z);
+        addSideObjects(z);
+      }
+      addWireSegment(-sStart, -sEnd);
+      sceneryEvents.forEach(ev=>{
+        if(ev.s >= sStart - 30 && ev.s < sEnd + 30) ev.fn();
+      });
+
+      if(chunkIndex === 0){
+        const curveLineMat = new THREE.LineBasicMaterial({color:0x4d3d31});
+        for(let rx of [-.82,.82,2.58,4.22,-4.22,-2.58]){
+          const pts=[];
+          for(let i=0;i<80;i++){
+            const z=10-i*7;
+            const x=rx + Math.sin(i/22)*1.8*(i/80);
+            pts.push(new THREE.Vector3(x,.32,z));
+          }
+          world.add(new THREE.Line(new THREE.BufferGeometry().setFromPoints(pts), curveLineMat));
+        }
+      }
+    });
+
+    world.add(group);
+    sceneryChunks.set(chunkIndex, {group, start:sStart, end:sEnd});
+  }
+
+  function updateSceneryChunks(currentS){
+    const firstNeeded = Math.max(0, Math.floor((currentS - SCENERY_BACK_DISTANCE) / SCENERY_CHUNK_LENGTH));
+    const lastNeeded = Math.ceil((currentS + SCENERY_FORWARD_DISTANCE) / SCENERY_CHUNK_LENGTH);
+    for(let i=firstNeeded; i<=lastNeeded; i++) generateSceneryChunk(i);
+
+    sceneryChunks.forEach((chunk, idx)=>{
+      if(chunk.end < currentS - SCENERY_BACK_DISTANCE){
+        world.remove(chunk.group);
+        disposeObject3D(chunk.group);
+        sceneryChunks.delete(idx);
+      }
+    });
+  }
+  updateSceneryChunks(0);
 
   // ルートデータ：今後ここに街並み・駅・信号・カーブ・制限速度を追加して拡張できます。
   // s = 起点からの距離(m)。ATSは警告のみで、強制減速・強制停止はしません。
@@ -1887,7 +1954,8 @@
       if(passedStopLine && distance < -35 && speed > 5 && !stationStopDone){
         advanceToNextStop();
       }
-      world.position.z += dz;
+      updateSceneryChunks(routeS);
+      world.position.z = routeS;
       // no short visual loop: the route is long and scenery changes by zone
       // fixed viewpoint, only slight natural vibration
       camera.position.x = Math.sin(now*.0017)*0.018*(speed/60);
