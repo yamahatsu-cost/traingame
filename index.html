@@ -594,12 +594,89 @@
       new THREE.BufferGeometry().setFromPoints([new THREE.Vector3(-5.4,6.6,z),new THREE.Vector3(0,5.65,z),new THREE.Vector3(5.4,6.6,z)]),
       mat.wire
     ); world.add(tri1);
-    const sig = new THREE.Group();
-    const box = new THREE.Mesh(new THREE.BoxGeometry(.42,1.1,.18), mat.signalDark); sig.add(box);
-    const light = new THREE.Mesh(new THREE.SphereGeometry(.13,16,16), mat.signalGreen);
-    light.position.set(0,.25,-.1); sig.add(light);
-    sig.position.set(-2.8,5.45,z-.8);
-    world.add(sig);
+    // 信号機：空中に浮いた黒い板ではなく、架線柱からブラケットで固定された3灯式にする
+    // 表示灯は上から赤・黄・青緑。遠くからでも見えるよう、点灯色には小さな発光球を入れる。
+    if (Math.abs(Math.round(z)) % 408 < 34) {
+      const signalGroup = new THREE.Group();
+      const signalX = -3.15;
+      const signalY = 4.45;
+      const signalZ = z - .90;
+      const poleX = -5.4;
+      const darkMetal = new THREE.MeshStandardMaterial({color:0x101112, roughness:.45, metalness:.35});
+      const blackFace = new THREE.MeshStandardMaterial({color:0x020202, roughness:.36, metalness:.18});
+      const bracketMat = new THREE.MeshStandardMaterial({color:0x33383a, roughness:.5, metalness:.25});
+      const lampOffMat = new THREE.MeshBasicMaterial({color:0x050505});
+      const lampRedMat = new THREE.MeshBasicMaterial({color:0xff1b24});
+      const lampYellowMat = new THREE.MeshBasicMaterial({color:0xffd21a});
+      const lampBlueMat = new THREE.MeshBasicMaterial({color:0x22e7ff});
+      const lensMats = [lampRedMat, lampYellowMat, lampBlueMat];
+
+      // 架線柱から信号機までの横腕・斜材・吊り金具
+      const support = new THREE.Mesh(new THREE.BoxGeometry(Math.abs(signalX - poleX) + .25, .10, .10), bracketMat);
+      support.position.set((signalX + poleX) / 2, signalY + .76, signalZ);
+      world.add(support);
+      const hanger = new THREE.Mesh(new THREE.BoxGeometry(.08, .62, .08), bracketMat);
+      hanger.position.set(signalX, signalY + .42, signalZ);
+      world.add(hanger);
+      const backStay = new THREE.Mesh(new THREE.BoxGeometry(Math.abs(signalX - poleX) + .08, .055, .055), bracketMat);
+      backStay.position.set((signalX + poleX) / 2, signalY + .47, signalZ + .04);
+      backStay.rotation.z = -.18;
+      world.add(backStay);
+      const clamp = new THREE.Mesh(new THREE.BoxGeometry(.26, .22, .18), bracketMat);
+      clamp.position.set(poleX, signalY + .75, signalZ);
+      world.add(clamp);
+
+      // 信号機本体：縦長の黒いケース＋上下の丸み表現
+      const body = new THREE.Mesh(new THREE.BoxGeometry(.54, 1.50, .22), blackFace);
+      body.position.set(signalX, signalY, signalZ);
+      body.castShadow = true;
+      signalGroup.add(body);
+      const topCap = new THREE.Mesh(new THREE.SphereGeometry(.27, 18, 10), darkMetal);
+      topCap.scale.set(1, .42, .42); topCap.position.set(signalX, signalY + .75, signalZ);
+      signalGroup.add(topCap);
+      const bottomCap = new THREE.Mesh(new THREE.SphereGeometry(.27, 18, 10), darkMetal);
+      bottomCap.scale.set(1, .42, .42); bottomCap.position.set(signalX, signalY - .75, signalZ);
+      signalGroup.add(bottomCap);
+
+      // 3灯。黒いリング・庇・レンズを重ねて写真の信号らしくする
+      const lampYs = [signalY + .46, signalY, signalY - .46];
+      lampYs.forEach((ly, idx)=>{
+        const ring = new THREE.Mesh(new THREE.TorusGeometry(.145, .035, 10, 22), darkMetal);
+        ring.position.set(signalX, ly, signalZ - .13);
+        signalGroup.add(ring);
+
+        const hood = new THREE.Mesh(new THREE.BoxGeometry(.38, .08, .30), darkMetal);
+        hood.position.set(signalX, ly + .15, signalZ - .18);
+        hood.rotation.x = -.08;
+        signalGroup.add(hood);
+
+        const lens = new THREE.Mesh(new THREE.SphereGeometry(.105, 18, 12), lensMats[idx]);
+        lens.position.set(signalX, ly, signalZ - .18);
+        signalGroup.add(lens);
+
+        const glow = new THREE.Mesh(new THREE.SphereGeometry(.17, 18, 12), lensMats[idx]);
+        glow.position.set(signalX, ly, signalZ - .195);
+        glow.material.transparent = true;
+        glow.material.opacity = idx === 2 ? .42 : .16;
+        signalGroup.add(glow);
+      });
+
+      // 背面取付金具と細いケーブル
+      const rearBox = new THREE.Mesh(new THREE.BoxGeometry(.20, .85, .12), bracketMat);
+      rearBox.position.set(signalX + .34, signalY, signalZ + .04);
+      signalGroup.add(rearBox);
+      const cable = new THREE.Line(
+        new THREE.BufferGeometry().setFromPoints([
+          new THREE.Vector3(signalX + .10, signalY + .76, signalZ + .02),
+          new THREE.Vector3(signalX + .10, signalY + 1.15, signalZ + .02),
+          new THREE.Vector3(poleX + .25, signalY + 1.18, signalZ + .02)
+        ]),
+        mat.wire
+      );
+      world.add(cable);
+
+      world.add(signalGroup);
+    }
   }
 
   function addWires(){
@@ -613,23 +690,119 @@
     }
   }
 
+
+  // 田舎区間用：昔風の民家・畑・林を作るための部品
+  function addOldRuralHouse(side, z, scale=1){
+    const baseX = side * (8.6 + Math.random()*6.8);
+    const baseZ = z + (Math.random()-.5)*18;
+    const w = (3.8 + Math.random()*2.2) * scale;
+    const h = (1.65 + Math.random()*.55) * scale;
+    const d = (4.2 + Math.random()*2.6) * scale;
+    const wallColors = [0xc8b08f,0xb99670,0xd7c3a2,0x9b8b73,0x6e6256];
+    const wallMat = new THREE.MeshStandardMaterial({color:wallColors[Math.floor(Math.random()*wallColors.length)], roughness:.9});
+    const darkWood = new THREE.MeshStandardMaterial({color:0x3a2a1f, roughness:.88});
+    const roofMat = new THREE.MeshStandardMaterial({color:[0x2f3030,0x3d3b38,0x4a4741][Math.floor(Math.random()*3)], roughness:.78, metalness:.04});
+    const glassMat = new THREE.MeshBasicMaterial({color:0x23343c});
+
+    const house = new THREE.Group();
+    const body = new THREE.Mesh(new THREE.BoxGeometry(w,h,d), wallMat);
+    body.position.y = h/2;
+    house.add(body);
+
+    // 低めで幅広い瓦屋根風。左右に庇を出す
+    const roof1 = new THREE.Mesh(new THREE.BoxGeometry(w*1.20,.34,d*1.16), roofMat);
+    roof1.position.y = h + .18*scale;
+    roof1.rotation.z = side*.08;
+    house.add(roof1);
+    const ridge = new THREE.Mesh(new THREE.BoxGeometry(w*.18,.22,d*1.22), roofMat);
+    ridge.position.y = h + .45*scale;
+    house.add(ridge);
+    const eaveL = new THREE.Mesh(new THREE.BoxGeometry(.12,.18,d*1.18), darkWood);
+    eaveL.position.set(-w*.62,h+.02*scale,0); house.add(eaveL);
+    const eaveR = new THREE.Mesh(new THREE.BoxGeometry(.12,.18,d*1.18), darkWood);
+    eaveR.position.set(w*.62,h+.02*scale,0); house.add(eaveR);
+
+    // 木枠・引き戸・小窓
+    for(let i=-1;i<=1;i++){
+      const post = new THREE.Mesh(new THREE.BoxGeometry(.08,h*.92,.08), darkWood);
+      post.position.set(i*w*.30,h*.47,-d*.52-.02); house.add(post);
+    }
+    const door = new THREE.Mesh(new THREE.BoxGeometry(w*.30,h*.62,.06), darkWood);
+    door.position.set(-w*.16,h*.36,-d*.54); house.add(door);
+    const win1 = new THREE.Mesh(new THREE.BoxGeometry(w*.26,h*.28,.065), glassMat);
+    win1.position.set(w*.22,h*.55,-d*.545); house.add(win1);
+    const win2 = new THREE.Mesh(new THREE.BoxGeometry(w*.20,h*.23,.065), glassMat);
+    win2.position.set(w*.48,h*.54,-d*.545); house.add(win2);
+
+    // 小さな縁側・軒下
+    const porch = new THREE.Mesh(new THREE.BoxGeometry(w*.92,.10,.50), darkWood);
+    porch.position.set(0,.18,-d*.76); house.add(porch);
+    const step = new THREE.Mesh(new THREE.BoxGeometry(w*.38,.08,.32), new THREE.MeshStandardMaterial({color:0x8a7c68,roughness:.9}));
+    step.position.set(-w*.10,.09,-d*.98); house.add(step);
+
+    house.position.set(baseX, .02, baseZ);
+    house.rotation.y = side*(.06 + Math.random()*.05);
+    world.add(house);
+
+    // 家の周りの生垣・庭木
+    const hedgeMat = new THREE.MeshStandardMaterial({color:0x496f2d, roughness:.95});
+    const hedge = new THREE.Mesh(new THREE.BoxGeometry(w*.85,.42,d*.14), hedgeMat);
+    hedge.position.set(baseX - side*w*.15,.28,baseZ - d*.92);
+    world.add(hedge);
+    if(Math.random()<.8){
+      addRealisticTree(baseX + side*(w*.75+Math.random()*1.2), baseZ + (Math.random()-.5)*d, .75+Math.random()*.22, side);
+    }
+  }
+
+  function addRiceField(side,z,wide=false){
+    const fieldMat = new THREE.MeshStandardMaterial({color:wide?0x6b8f3a:0x5f8134, roughness:.96});
+    const waterMat = new THREE.MeshStandardMaterial({color:0x6e8588, roughness:.5, metalness:.02});
+    const x = side*(10.5 + Math.random()*8.0);
+    const zz = z + (Math.random()-.5)*24;
+    const w = (wide?9:5) + Math.random()*6;
+    const d = (wide?16:9) + Math.random()*12;
+    const field = new THREE.Mesh(new THREE.BoxGeometry(w,.035,d), Math.random()<.22 ? waterMat : fieldMat);
+    field.position.set(x,.025,zz);
+    field.rotation.y = side*(Math.random()*.08);
+    world.add(field);
+    const furrowMat = new THREE.MeshBasicMaterial({color:0x2f4e25});
+    for(let i=-3;i<=3;i++){
+      const f = new THREE.Mesh(new THREE.BoxGeometry(.045,.04,d*.92), furrowMat);
+      f.position.set(x+i*w/7,.055,zz);
+      f.rotation.y = field.rotation.y;
+      world.add(f);
+    }
+  }
+
+  function addRuralUtilityPole(side,z){
+    const x = side*(5.9 + Math.random()*1.8);
+    const poleMat = new THREE.MeshStandardMaterial({color:0x5d554a,roughness:.82});
+    const p = new THREE.Mesh(new THREE.CylinderGeometry(.08,.11,4.6,10), poleMat);
+    p.position.set(x,2.3,z); world.add(p);
+    const arm = new THREE.Mesh(new THREE.BoxGeometry(1.25,.07,.07), poleMat);
+    arm.position.set(x-side*.42,4.15,z); arm.rotation.z = side*.06; world.add(arm);
+    const insMat = new THREE.MeshStandardMaterial({color:0xd8d6c7,roughness:.5});
+    [-.42,.42].forEach(off=>{
+      const ins = new THREE.Mesh(new THREE.CylinderGeometry(.045,.045,.16,8), insMat);
+      ins.position.set(x-side*.42+off,4.05,z); world.add(ins);
+    });
+  }
+
+  function addRuralTreeMass(side,z,count=5){
+    for(let i=0;i<count;i++){
+      const x = side*(8.0 + Math.random()*11.5);
+      const zz = z - 16 + Math.random()*32;
+      addRealisticTree(x, zz, .85 + Math.random()*.58, side);
+    }
+  }
+
   function addBuilding(side, z, zone){
     if(zone==='rural' || zone==='mountain'){
-      const houseMat = new THREE.MeshStandardMaterial({color:[0xd6c6aa,0xc9d0c4,0xb9aa96,0xe0ded5][Math.floor(Math.random()*4)], roughness:.86});
-      const w=2.8+Math.random()*2.2, h=2.2+Math.random()*2.0, d=3.2+Math.random()*3.5;
-      const house = new THREE.Mesh(new THREE.BoxGeometry(w,h,d), houseMat);
-      house.position.set(side*(11+Math.random()*10), h/2-.22, z+(Math.random()-.5)*20);
-      world.add(house);
-      const roof = new THREE.Mesh(new THREE.BoxGeometry(w*1.12,.32,d*1.12), new THREE.MeshStandardMaterial({color:0x5d5f63,roughness:.75}));
-      roof.position.set(house.position.x,h+.02,house.position.z); roof.rotation.z=side*.08; world.add(roof);
-      if(Math.random()<.75){
-        const field = new THREE.Mesh(new THREE.BoxGeometry(6+Math.random()*8,.025,9+Math.random()*12), new THREE.MeshStandardMaterial({color:0x4f7f3a,roughness:.95}));
-        field.position.set(side*(16+Math.random()*10),.02,z+(Math.random()-.5)*24); world.add(field);
-        for(let i=0;i<5;i++){
-          const furrow = new THREE.Mesh(new THREE.BoxGeometry(.05,.03,field.geometry.parameters.depth*.86), new THREE.MeshBasicMaterial({color:0x2a4b25}));
-          furrow.position.set(field.position.x-2+i, .05, field.position.z); world.add(furrow);
-        }
-      }
+      // 田舎は箱型ビルではなく、昔風の民家＋畑＋木の多い景色にする
+      if(Math.random()<.72) addOldRuralHouse(side,z, zone==='mountain' ? .88 : 1.0);
+      if(Math.random()<.92) addRiceField(side,z, zone==='mountain');
+      addRuralTreeMass(side,z, zone==='mountain' ? 7 : 5);
+      if(Math.random()<.65) addRuralUtilityPole(side,z+(Math.random()-.5)*20);
       return;
     }
     const isTown = zone==='town' || zone==='station' || zone==='residential';
@@ -663,14 +836,114 @@
     }
   }
 
+  // 写真の街路樹に近い形：丸い球だけの木をやめ、幹・枝・細かな葉房を重ねて作る
+  const treeMats = {
+    trunk: new THREE.MeshStandardMaterial({color:0x5a4430, roughness:.88, metalness:.02}),
+    barkDark: new THREE.MeshStandardMaterial({color:0x362719, roughness:.92, metalness:.01}),
+    leafA: new THREE.MeshStandardMaterial({color:0x2f6f33, roughness:.92}),
+    leafB: new THREE.MeshStandardMaterial({color:0x3f8a3d, roughness:.9}),
+    leafC: new THREE.MeshStandardMaterial({color:0x6fa646, roughness:.88})
+  };
+
+  function cylBetween(a,b,r,material,segments=9){
+    const va = new THREE.Vector3(a[0],a[1],a[2]);
+    const vb = new THREE.Vector3(b[0],b[1],b[2]);
+    const mid = va.clone().add(vb).multiplyScalar(.5);
+    const len = va.distanceTo(vb);
+    const c = new THREE.Mesh(new THREE.CylinderGeometry(r,r*.72,len,segments), material);
+    c.position.copy(mid);
+    c.quaternion.setFromUnitVectors(new THREE.Vector3(0,1,0), vb.clone().sub(va).normalize());
+    c.castShadow = true;
+    c.receiveShadow = true;
+    world.add(c);
+    return c;
+  }
+
+  function addLeafClump(x,y,z,scale,matLeaf){
+    // 球そのものではなく、上下に少し伸びた不規則な葉の塊にする
+    const geo = new THREE.SphereGeometry(scale, 12, 9);
+    const leaf = new THREE.Mesh(geo, matLeaf);
+    leaf.scale.set(.70 + Math.random()*.28, 1.00 + Math.random()*.42, .58 + Math.random()*.28);
+    leaf.position.set(x,y,z);
+    leaf.rotation.set(Math.random()*.25, Math.random()*Math.PI, (Math.random()-.5)*.18);
+    leaf.castShadow = true;
+    leaf.receiveShadow = true;
+    world.add(leaf);
+    return leaf;
+  }
+
+  function addRealisticTree(x,z,scale=1,side=1){
+    const baseY = 0;
+    const h = (4.0 + Math.random()*1.2) * scale;
+    const lean = side * (.10 + Math.random()*.16) * scale;
+    const trunkTop = [x + lean, baseY + h*.72, z + (Math.random()-.5)*.28];
+
+    // 幹：写真のように細めで上に伸びる
+    cylBetween([x,baseY+.05,z], trunkTop, .13*scale, treeMats.trunk, 10);
+    cylBetween([x+.035*side,baseY+.15,z+.02], [trunkTop[0]+.03*side,trunkTop[1],trunkTop[2]], .055*scale, treeMats.barkDark, 8);
+
+    // 枝を複数方向に伸ばす
+    const branchEnds = [];
+    const branchCount = 6 + Math.floor(Math.random()*3);
+    for(let i=0;i<branchCount;i++){
+      const t = .42 + i/(branchCount-1)*.38;
+      const start = [x + lean*t*.82, baseY + h*t, z];
+      const dir = (i%2===0 ? -1 : 1) * side;
+      const out = (.40 + Math.random()*.68) * scale * dir;
+      const up = (.42 + Math.random()*.62) * scale;
+      const dz = (Math.random()-.5) * .75 * scale;
+      const end = [start[0]+out, start[1]+up, start[2]+dz];
+      cylBetween(start,end,.045*scale, treeMats.trunk,8);
+      branchEnds.push(end);
+    }
+
+    // 葉は縦長の楕円形クラウン。銀杏並木・街路樹っぽく上方向に密度を持たせる
+    const topY = baseY + h*.92;
+    const leafMats = [treeMats.leafA, treeMats.leafB, treeMats.leafC];
+    for(let i=0;i<15;i++){
+      const angle = (i/15)*Math.PI*2 + Math.random()*.45;
+      const radius = (.18 + Math.random()*.78) * scale * (i<5?.55:1);
+      const lx = trunkTop[0] + Math.cos(angle)*radius*.72;
+      const ly = topY - Math.random()*1.22*scale + (i%4)*.08*scale;
+      const lz = trunkTop[2] + Math.sin(angle)*radius*.62;
+      const s = (.40 + Math.random()*.34) * scale;
+      addLeafClump(lx,ly,lz,s,leafMats[i%leafMats.length]);
+    }
+    branchEnds.forEach((b,i)=>{
+      addLeafClump(b[0], b[1]+.22*scale, b[2], (.34+Math.random()*.24)*scale, leafMats[(i+1)%leafMats.length]);
+    });
+
+    // 下枝が見えるよう、幹の周りは少し葉を減らし、根元に植樹帯を追加
+    const base = new THREE.Mesh(new THREE.BoxGeometry(.72*scale,.05,.72*scale), new THREE.MeshStandardMaterial({color:0x315a2a,roughness:.95}));
+    base.position.set(x,.035,z);
+    world.add(base);
+  }
+
   function addTree(side,z,scale=1){
-    const trunk=new THREE.Mesh(new THREE.CylinderGeometry(.10*scale,.16*scale,2.2*scale,8), new THREE.MeshStandardMaterial({color:0x4a3525}));
-    trunk.position.set(side*(7.8+Math.random()*2.2),1.1*scale,z-8+Math.random()*16); world.add(trunk);
-    const leaf=new THREE.Mesh(new THREE.SphereGeometry((.9+Math.random()*.55)*scale,12,10), mat.green);
-    leaf.position.set(trunk.position.x,2.5*scale,trunk.position.z); world.add(leaf);
+    const x = side*(7.8+Math.random()*2.2);
+    const zz = z-8+Math.random()*16;
+    addRealisticTree(x, zz, scale, side);
   }
 
   function addRoadAndFence(side,z,zone){
+    // 田舎区間では高い緑フェンスや都市道路を出さず、低い土手・草・細い生活道路にする
+    if(zone==='rural' || zone==='mountain'){
+      const grassMat = new THREE.MeshStandardMaterial({color:0x4f7a34,roughness:.96});
+      const bank = new THREE.Mesh(new THREE.BoxGeometry(1.8,.22,34), grassMat);
+      bank.position.set(side*4.8,.05,z); bank.rotation.z = side*.035; world.add(bank);
+      const ditch = new THREE.Mesh(new THREE.BoxGeometry(.48,.035,34), new THREE.MeshStandardMaterial({color:0x596d61,roughness:.9}));
+      ditch.position.set(side*6.2,.035,z); world.add(ditch);
+      if(Math.random()<.55){
+        const path = new THREE.Mesh(new THREE.BoxGeometry(2.4,.035,34), new THREE.MeshStandardMaterial({color:0x8a7b63,roughness:.95}));
+        path.position.set(side*(7.2+Math.random()*1.6),.025,z); world.add(path);
+      }
+      for(let i=0;i<7;i++){
+        const weed = new THREE.Mesh(new THREE.BoxGeometry(.18+Math.random()*.35,.08+Math.random()*.25,.45+Math.random()*.9), grassMat);
+        weed.position.set(side*(3.1+Math.random()*3.5),.09,z-16+Math.random()*32);
+        world.add(weed);
+      }
+      return;
+    }
     const wallH = zone==='elevated' ? 2.6 : 1.5;
     const wallMat = zone==='elevated' ? mat.concrete : mat.fence;
     const wall=new THREE.Mesh(new THREE.BoxGeometry(.22,wallH,34), wallMat);
@@ -701,33 +974,24 @@
     [-1,1].forEach(side=>addRoadAndFence(side,z,zone));
 
     // overhead road/rail bridge occasionally, like urban railway views
-    if(Math.abs(Math.round(z)) % 272 < 34){
+    if(zone!=='rural' && zone!=='mountain' && Math.abs(Math.round(z)) % 272 < 34){
       // 線路をまたぎ、左右の街区・ビル方向へ伸びる高架橋
       const bridgeDeck = new THREE.Mesh(new THREE.BoxGeometry(34,.55,5.8), mat.bridge);
       bridgeDeck.position.set(0,5.05,z-6); world.add(bridgeDeck);
-
-      // 道路面の継ぎ目
       for(let bx=-14; bx<=14; bx+=4){
         const seam = new THREE.Mesh(new THREE.BoxGeometry(.045,.58,5.9), new THREE.MeshStandardMaterial({color:0x646d6a,roughness:.7}));
         seam.position.set(bx,5.36,z-6); world.add(seam);
       }
-
-      // ビル側へ続く桁
       [-1,1].forEach(side=>{
         const approach = new THREE.Mesh(new THREE.BoxGeometry(16,.42,4.8), mat.bridge);
         approach.position.set(side*18,5.0,z-6); world.add(approach);
-
         for(let px=9; px<=24; px+=7){
           const pier = new THREE.Mesh(new THREE.BoxGeometry(.55,5.2,.55), mat.concrete);
           pier.position.set(side*px,2.55,z-6); world.add(pier);
         }
-
-        // 高架橋の下に側道を少し見せる
         const sideRoad = new THREE.Mesh(new THREE.BoxGeometry(9,.04,5.4), new THREE.MeshStandardMaterial({color:0x31383c,roughness:.9}));
         sideRoad.position.set(side*15,.03,z-6); world.add(sideRoad);
       });
-
-      // 線路脇の橋脚
       [-7.2,7.2].forEach(x=>{
         const pier = new THREE.Mesh(new THREE.BoxGeometry(.55,5.2,.55), mat.concrete);
         pier.position.set(x,2.55,z-6); world.add(pier);
@@ -745,6 +1009,22 @@
       const sign = new THREE.Mesh(new THREE.BoxGeometry(.32,.42,.04), new THREE.MeshBasicMaterial({color:0xffffff}));
       sign.position.set(side*3.15,.95,z-10+Math.random()*20); world.add(sign);
     }
+
+    if(zone==='rural' || zone==='mountain'){
+      // 田舎ほど木を多くし、昔風の民家・畑・草むらを線路沿いに配置
+      [-1,1].forEach(side=>{
+        addRuralTreeMass(side,z,zone==='mountain'?10:7);
+        if(Math.random()<.82) addOldRuralHouse(side,z-7+Math.random()*14, zone==='mountain'?0.86:1.0);
+        if(Math.random()<.95) addRiceField(side,z, true);
+        if(Math.random()<.78) addRuralUtilityPole(side,z-12+Math.random()*24);
+        // 奥の林：山・田舎の背景密度を増やす
+        for(let i=0;i<(zone==='mountain'?8:5);i++){
+          addRealisticTree(side*(15+Math.random()*12), z-16+Math.random()*32, 1.1+Math.random()*.65, side);
+        }
+      });
+      return;
+    }
+
     if(zone==='suburb' || zone==='residential' || zone==='city'){
       // 線路脇の雑草・植栽
       for(let g=0;g<(zone==='city'?2:5);g++){
@@ -752,22 +1032,13 @@
         grass.position.set((Math.random()<.5?-1:1)*(2.6+Math.random()*2.2),.04,z-14+Math.random()*28);
         world.add(grass);
       }
-
-      // 街路樹：線路の外側に点在
-      if(Math.random()<.85){
+      // 街路樹：球体だけの不自然な木ではなく、幹・枝・葉房を持つ並木にする
+      if(Math.random()<.90){
         [-1,1].forEach(side=>{
-          if(Math.random()<.75){
-            const trunk = new THREE.Mesh(new THREE.CylinderGeometry(.09,.13,2.2,9), new THREE.MeshStandardMaterial({color:0x4a3525,roughness:.8}));
-            trunk.position.set(side*(7.2+Math.random()*1.3),1.05,z-13+Math.random()*26);
-            world.add(trunk);
-
-            const leaf1 = new THREE.Mesh(new THREE.SphereGeometry(.85+Math.random()*.35,12,10), mat.green);
-            leaf1.position.set(trunk.position.x,2.45,trunk.position.z);
-            world.add(leaf1);
-
-            const leaf2 = new THREE.Mesh(new THREE.SphereGeometry(.55+Math.random()*.25,10,8), mat.green);
-            leaf2.position.set(trunk.position.x+side*.35,2.8,trunk.position.z+.25);
-            world.add(leaf2);
+          if(Math.random()<.82){
+            const treeX = side*(7.2+Math.random()*1.3);
+            const treeZ = z-13+Math.random()*26;
+            addRealisticTree(treeX, treeZ, .88 + Math.random()*.28, side);
           }
         });
       }
@@ -784,7 +1055,6 @@
       }
     }
   }
-
 
   function addStationSign(x,y,z){
     const g = new THREE.Group();
@@ -898,34 +1168,157 @@
     });
   }
 
-  function addTrussRailBridge(zStart, length=92){
-    // 屋根の低い箱型ではなく、運転席視点で十分な高さがあるトラス鉄橋
-    const zMid=zStart-length/2;
-    const bridgeMat = new THREE.MeshStandardMaterial({color:0x8b3a2e,roughness:.62,metalness:.18});
-    const deck = new THREE.Mesh(new THREE.BoxGeometry(8,.24,length), mat.bridge);
-    deck.position.set(0,.12,zMid); world.add(deck);
+  function addTrussRailBridge(zStart, length=108){
+    // 写真のような「古い赤茶色の上路式トラス鉄橋」に作り直し
+    // ポイント：高い門型フレーム、上部アーチ風の横梁、側面Xトラス、細い補助トラス、リベット、歩廊、枕木を追加
+    const zMid = zStart - length / 2;
+    const spanCount = 9;
+    const panel = length / spanCount;
+    const railLevel = .42;
+    const deckY = .10;
+    const lowerY = .95;
+    const upperY = 6.25;
+    const topY = 6.75;
+    const sideX = 4.45;
 
-    [-4.25,4.25].forEach(x=>{
-      const lowerBeam=new THREE.Mesh(new THREE.BoxGeometry(.28,.28,length), bridgeMat);
-      lowerBeam.position.set(x,1.05,zMid); world.add(lowerBeam);
-      const upperBeam=new THREE.Mesh(new THREE.BoxGeometry(.30,.30,length), bridgeMat);
-      upperBeam.position.set(x,5.95,zMid); world.add(upperBeam);
-      for(let i=0;i<10;i++){
-        const zz=zStart-6-i*(length-12)/9;
-        const upright=new THREE.Mesh(new THREE.BoxGeometry(.22,5.15,.22), bridgeMat);
-        upright.position.set(x,3.45,zz); world.add(upright);
-        const diag1=new THREE.Mesh(new THREE.BoxGeometry(.16,5.3,.16), bridgeMat);
-        diag1.position.set(x,3.45,zz-2.4); diag1.rotation.x=.68; world.add(diag1);
+    const ironMat = new THREE.MeshStandardMaterial({color:0x7a3426, roughness:.72, metalness:.28});
+    const darkIronMat = new THREE.MeshStandardMaterial({color:0x321914, roughness:.76, metalness:.35});
+    const edgeRustMat = new THREE.MeshStandardMaterial({color:0xa65a32, roughness:.88, metalness:.12});
+    const deckMat = new THREE.MeshStandardMaterial({color:0x3f3d38, roughness:.82, metalness:.08});
+    const walkMat = new THREE.MeshStandardMaterial({color:0x8f8a7b, roughness:.9, metalness:.04});
+    const boltMat = new THREE.MeshStandardMaterial({color:0x2a1713, roughness:.55, metalness:.45});
+
+    function box(w,h,d,x,y,z,material=ironMat,rx=0,ry=0,rz=0){
+      const m = new THREE.Mesh(new THREE.BoxGeometry(w,h,d), material);
+      m.position.set(x,y,z); m.rotation.set(rx,ry,rz); m.castShadow=true; m.receiveShadow=true; world.add(m); return m;
+    }
+    function cylBetween(a,b,r,material=ironMat,seg=10){
+      const va = new THREE.Vector3(a[0],a[1],a[2]);
+      const vb = new THREE.Vector3(b[0],b[1],b[2]);
+      const mid = va.clone().add(vb).multiplyScalar(.5);
+      const len = va.distanceTo(vb);
+      const c = new THREE.Mesh(new THREE.CylinderGeometry(r,r,len,seg), material);
+      c.position.copy(mid);
+      c.quaternion.setFromUnitVectors(new THREE.Vector3(0,1,0), vb.clone().sub(va).normalize());
+      c.castShadow=true; c.receiveShadow=true; world.add(c); return c;
+    }
+    function bolt(x,y,z,s=.055){
+      const b = new THREE.Mesh(new THREE.SphereGeometry(s,8,6), boltMat);
+      b.position.set(x,y,z); world.add(b); return b;
+    }
+
+    // 橋の下：水面・土手。鉄橋区間だと分かりやすくする
+    const water = new THREE.Mesh(new THREE.BoxGeometry(32,.035,length+34), new THREE.MeshStandardMaterial({color:0x566f78, roughness:.58, metalness:.05}));
+    water.position.set(0,-.34,zMid); world.add(water);
+    [-1,1].forEach(side=>{
+      const bank = new THREE.Mesh(new THREE.BoxGeometry(7,.08,length+28), new THREE.MeshStandardMaterial({color:0x2f6f35,roughness:.95}));
+      bank.position.set(side*15,-.25,zMid); world.add(bank);
+    });
+
+    // 軌道床：写真のように中央は枕木・保守通路・側歩廊が見える形にする
+    box(5.25,.18,length,0,deckY,zMid,deckMat);
+    box(.62,.08,length,0,.31,zMid,walkMat); // 中央保守通路
+    [-3.70,3.70].forEach(x=>{
+      box(.92,.10,length,x,.52,zMid,walkMat);
+      box(.08,.48,length,x + Math.sign(x)*.50,.84,zMid,darkIronMat);
+      for(let i=0;i<spanCount*2;i++){
+        const zz=zStart-3-i*(length-6)/(spanCount*2-1);
+        box(.90,.06,.06,x,.92,zz,darkIronMat);
       }
     });
-    for(let i=0;i<8;i++){
-      const zz=zStart-8-i*(length-16)/7;
-      const top=new THREE.Mesh(new THREE.BoxGeometry(8.7,.22,.22), bridgeMat);
-      top.position.set(0,6.15,zz); world.add(top);
-      const crossA=new THREE.Mesh(new THREE.BoxGeometry(9.0,.16,.16), bridgeMat);
-      crossA.position.set(0,5.75,zz-2.1); crossA.rotation.z=.45; world.add(crossA);
-      const crossB=new THREE.Mesh(new THREE.BoxGeometry(9.0,.16,.16), bridgeMat);
-      crossB.position.set(0,5.75,zz+2.1); crossB.rotation.z=-.45; world.add(crossB);
+    for(let i=0;i<Math.floor(length/1.55);i++){
+      const zz = zStart - 1.2 - i*1.55;
+      box(2.55,.12,.24,0,railLevel,zz,new THREE.MeshStandardMaterial({color:0x5b3c25,roughness:.86}));
+      if(i%3===0){
+        box(.30,.045,.20,-1.23,railLevel+.13,zz,darkIronMat);
+        box(.30,.045,.20, 1.23,railLevel+.13,zz,darkIronMat);
+      }
+    }
+
+    // 長手方向の上下弦材
+    [-sideX, sideX].forEach(x=>{
+      box(.38,.38,length,x,lowerY,zMid,ironMat);
+      box(.42,.42,length,x,upperY,zMid,ironMat);
+      box(.22,.22,length,x,topY,zMid,darkIronMat);
+      // 外側の補強帯
+      box(.12,4.8,length,x + Math.sign(x)*.21,3.55,zMid,darkIronMat);
+    });
+
+    // 各パネルの門型フレーム・縦柱・上部横梁
+    for(let i=0;i<=spanCount;i++){
+      const zz = zStart - i*panel;
+      [-sideX, sideX].forEach(x=>{
+        cylBetween([x,lowerY,zz],[x,upperY,zz],.145,ironMat,12);
+        // 写真右端の縦材にある四角い補強プレート風
+        for(let p=0;p<5;p++){
+          const yy = 1.55 + p*.86;
+          box(.045,.25,.36,x+Math.sign(x)*.18,yy,zz,edgeRustMat);
+          bolt(x+Math.sign(x)*.22,yy+.12,zz+.18,.045);
+          bolt(x+Math.sign(x)*.22,yy-.12,zz-.18,.045);
+        }
+      });
+      box(sideX*2+.42,.30,.30,0,upperY,zz,ironMat);      // 上横梁
+      box(sideX*2-.8,.18,.18,0,topY,zz,darkIronMat);       // 最上部補助梁
+      // 門型上部の斜め補強（写真のX形）
+      cylBetween([-sideX,upperY,zz],[0,topY,zz],.075,darkIronMat,8);
+      cylBetween([ sideX,upperY,zz],[0,topY,zz],.075,darkIronMat,8);
+      // 吊架線の吊り金具
+      cylBetween([0,topY,zz],[0,5.25,zz],.025,darkIronMat,6);
+    }
+
+    // 側面の大きなXトラス＋中段の細い三角トラス
+    for(let i=0;i<spanCount;i++){
+      const z1 = zStart - i*panel;
+      const z2 = zStart - (i+1)*panel;
+      const zc = (z1+z2)/2;
+      [-sideX, sideX].forEach(x=>{
+        cylBetween([x,lowerY,z1],[x,upperY,z2],.105,ironMat,10);
+        cylBetween([x,upperY,z1],[x,lowerY,z2],.105,ironMat,10);
+        cylBetween([x,3.55,z1],[x,upperY,zc],.055,darkIronMat,8);
+        cylBetween([x,3.55,z2],[x,upperY,zc],.055,darkIronMat,8);
+        cylBetween([x,lowerY,zc],[x,3.55,z1],.055,darkIronMat,8);
+        cylBetween([x,lowerY,zc],[x,3.55,z2],.055,darkIronMat,8);
+        // 側面下部の横桁
+        box(.25,.16,panel,x,3.55,zc,darkIronMat);
+        // 接合部リベット
+        [lowerY,3.55,upperY].forEach(y=>{
+          bolt(x+Math.sign(x)*.18,y,z1+.12,.045);
+          bolt(x+Math.sign(x)*.18,y,z2-.12,.045);
+        });
+      });
+
+      // 天井のXブレース。写真の奥へ連続するX形を強調
+      cylBetween([-sideX,upperY,z1],[ sideX,upperY,z2],.075,darkIronMat,8);
+      cylBetween([ sideX,upperY,z1],[-sideX,upperY,z2],.075,darkIronMat,8);
+      cylBetween([-sideX*.72,topY,z1],[ sideX*.72,topY,z2],.052,ironMat,8);
+      cylBetween([ sideX*.72,topY,z1],[-sideX*.72,topY,z2],.052,ironMat,8);
+    }
+
+    // 入口と出口を写真のような重い門構えにする
+    [zStart, zStart-length].forEach(zz=>{
+      box(10.15,.46,.38,0,topY+.18,zz,darkIronMat);
+      [-sideX,sideX].forEach(x=>{
+        box(.72,5.85,.42,x,3.85,zz,darkIronMat);
+        box(.90,.36,.52,x,6.72,zz,edgeRustMat);
+        for(let y=1.3;y<6.4;y+=.48){
+          bolt(x+Math.sign(x)*.40,y,zz+.22,.045);
+          bolt(x+Math.sign(x)*.40,y,zz-.22,.045);
+        }
+      });
+      // 下側にも横桁を入れて、箱だけに見えないようにする
+      box(8.9,.26,.35,0,lowerY,zz,ironMat);
+    });
+
+    // ガードレールと架線柱の支持材
+    [-3.92,3.92].forEach(x=>{
+      box(.08,.95,length,x,1.28,zMid,darkIronMat);
+      box(.08,.06,length,x,1.88,zMid,ironMat);
+    });
+    for(let i=0;i<6;i++){
+      const zz = zStart-10-i*(length-20)/5;
+      box(.08,1.35,.08,-.34,5.2,zz,darkIronMat);
+      box(.08,1.35,.08, .34,5.2,zz,darkIronMat);
+      box(1.35,.055,.055,0,5.55,zz,darkIronMat);
     }
   }
 
