@@ -467,8 +467,8 @@
   const wrap = document.getElementById('threeWrap');
   const scene = new THREE.Scene();
   // 晴れ背景：雨天の灰色空をやめ、遠景山がぼけすぎない明るい空にする
-  scene.background = new THREE.Color(0xbfdcf0);
-  scene.fog = new THREE.Fog(0xbfdcf0, 180, 760);
+  scene.background = new THREE.Color(0x98d0ff);
+  scene.fog = new THREE.Fog(0x98d0ff, 180, 760);
 
   const camera = new THREE.PerspectiveCamera(58, innerWidth / innerHeight, 0.1, 900);
   camera.position.set(0, 2.55, 4.5);
@@ -764,10 +764,12 @@
   }
 
   const farBuildingMats = [
-    new THREE.MeshStandardMaterial({map:makeFarSkylineTexture('whiteTower'), roughness:.86, metalness:.02, transparent:true, opacity:.66, fog:true}),
-    new THREE.MeshStandardMaterial({map:makeFarSkylineTexture('blueGlass'), roughness:.62, metalness:.06, transparent:true, opacity:.60, fog:true}),
-    new THREE.MeshStandardMaterial({map:makeFarSkylineTexture('grayOffice'), roughness:.88, metalness:.02, transparent:true, opacity:.62, fog:true}),
-    new THREE.MeshStandardMaterial({map:makeFarSkylineTexture('hazySkyline'), roughness:.92, metalness:.01, transparent:true, opacity:.48, fog:true})
+    // 遠景の箱ビルは透けて見えないよう不透明化する。
+    // 隙間を埋める板テクスチャ側だけ透明を許可し、3Dビル本体は実体感を優先する。
+    new THREE.MeshStandardMaterial({map:makeFarSkylineTexture('whiteTower'), roughness:.86, metalness:.02, fog:true}),
+    new THREE.MeshStandardMaterial({map:makeFarSkylineTexture('blueGlass'), roughness:.62, metalness:.06, fog:true}),
+    new THREE.MeshStandardMaterial({map:makeFarSkylineTexture('grayOffice'), roughness:.88, metalness:.02, fog:true}),
+    new THREE.MeshStandardMaterial({map:makeFarSkylineTexture('hazySkyline'), roughness:.92, metalness:.01, fog:true})
   ];
 
 
@@ -1632,12 +1634,13 @@
 
   function addRiceField(side,z,wide=false){
     const fieldMat = new THREE.MeshStandardMaterial({color:wide?0x6b8f3a:0x5f8134, roughness:.96});
-    const waterMat = new THREE.MeshStandardMaterial({color:0x6e8588, roughness:.5, metalness:.02});
+    // 水田でも青く見えすぎないよう、少し土色を混ぜた反射色にする
+    const waterMat = new THREE.MeshStandardMaterial({color:0x79846d, roughness:.62, metalness:.02});
     const x = side*(10.5 + Math.random()*8.0);
     const zz = z + (Math.random()-.5)*24;
     const w = (wide?9:5) + Math.random()*6;
     const d = (wide?16:9) + Math.random()*12;
-    const field = new THREE.Mesh(new THREE.BoxGeometry(w,.035,d), Math.random()<.22 ? waterMat : fieldMat);
+    const field = new THREE.Mesh(new THREE.BoxGeometry(w,.035,d), Math.random()<.10 ? waterMat : fieldMat);
     field.position.set(x,.025,zz);
     field.rotation.y = side*(Math.random()*.08);
     world.add(field);
@@ -2021,13 +2024,26 @@
     // 田舎区間では高い緑フェンスや都市道路を出さず、低い土手・草・細い生活道路にする
     if(zone==='rural' || zone==='mountain'){
       const grassMat = new THREE.MeshStandardMaterial({color:0x4f7a34,roughness:.96});
+      const meadowMat = new THREE.MeshStandardMaterial({color:zone==='mountain' ? 0x6b8256 : 0x78925b, roughness:.98});
+      const earthMat = new THREE.MeshStandardMaterial({color:0x8a7b63,roughness:.95});
       const bank = new THREE.Mesh(new THREE.BoxGeometry(1.8,.22,34), grassMat);
       bank.position.set(side*4.8,.05,z); bank.rotation.z = side*.035; world.add(bank);
-      const ditch = new THREE.Mesh(new THREE.BoxGeometry(.48,.035,34), new THREE.MeshStandardMaterial({color:0x596d61,roughness:.9}));
+      const ditch = new THREE.Mesh(new THREE.BoxGeometry(.48,.035,34), new THREE.MeshStandardMaterial({color:0x66735f,roughness:.92}));
       ditch.position.set(side*6.2,.035,z); world.add(ditch);
+
+      // 線路脇から遠方まで草地を敷き、背景色の水色抜けを減らす
+      const meadowNear = new THREE.Mesh(new THREE.BoxGeometry(4.6,.03,34), meadowMat);
+      meadowNear.position.set(side*8.8,.018,z);
+      meadowNear.rotation.z = side*.012;
+      world.add(meadowNear);
+      const meadowFar = new THREE.Mesh(new THREE.BoxGeometry(8.5,.028,34), meadowMat);
+      meadowFar.position.set(side*15.2,.016,z);
+      meadowFar.rotation.z = side*.008;
+      world.add(meadowFar);
+
       if(Math.random()<.55){
-        const path = new THREE.Mesh(new THREE.BoxGeometry(2.4,.035,34), new THREE.MeshStandardMaterial({color:0x8a7b63,roughness:.95}));
-        path.position.set(side*(7.2+Math.random()*1.6),.025,z); world.add(path);
+        const path = new THREE.Mesh(new THREE.BoxGeometry(2.6,.035,34), earthMat);
+        path.position.set(side*(7.3+Math.random()*1.4),.025,z); world.add(path);
       }
       for(let i=0;i<7;i++){
         const weed = new THREE.Mesh(new THREE.BoxGeometry(.18+Math.random()*.35,.08+Math.random()*.25,.45+Math.random()*.9), grassMat);
@@ -2153,20 +2169,49 @@
       g.stroke();
     });
 
-    // 雲
-    for(let i=0;i<6;i++){
-      const cx = 220 + i*460 + Math.random()*80;
-      const cy = 120 + Math.random()*90;
-      const rx = 56 + Math.random()*46;
-      const ry = 24 + Math.random()*20;
-      const grad = g.createRadialGradient(cx-rx*.3, cy-ry*.25, 8, cx, cy, rx*1.15);
-      grad.addColorStop(0,'rgba(255,255,255,.32)');
-      grad.addColorStop(.65,'rgba(255,255,255,.16)');
-      grad.addColorStop(1,'rgba(255,255,255,0)');
-      g.fillStyle = grad;
-      g.beginPath(); g.ellipse(cx,cy,rx,ry,0,0,Math.PI*2); g.fill();
-      g.beginPath(); g.ellipse(cx-rx*.42,cy+4,rx*.48,ry*.72,0,0,Math.PI*2); g.fill();
-      g.beginPath(); g.ellipse(cx+rx*.34,cy+3,rx*.44,ry*.66,0,0,Math.PI*2); g.fill();
+    // 雲：同じ形の繰り返しを避け、薄雲と綿雲を混ぜて自然にする
+    for(let i=0;i<9;i++){
+      const cx = 140 + i*318 + Math.sin(i*1.7)*42;
+      const cy = 88 + (i%3)*34 + Math.sin(i*.9)*10;
+      const kind = i % 3;
+      if(kind === 0){
+        // 横に流れる薄雲
+        const rx = 92 + Math.random()*54;
+        const ry = 20 + Math.random()*10;
+        const grad = g.createRadialGradient(cx-rx*.45, cy, 8, cx, cy, rx*1.12);
+        grad.addColorStop(0,'rgba(255,255,255,.22)');
+        grad.addColorStop(.55,'rgba(255,255,255,.10)');
+        grad.addColorStop(1,'rgba(255,255,255,0)');
+        g.fillStyle = grad;
+        g.beginPath(); g.ellipse(cx,cy,rx,ry,0,0,Math.PI*2); g.fill();
+        g.beginPath(); g.ellipse(cx-rx*.36,cy+2,rx*.42,ry*.72,-.10,0,Math.PI*2); g.fill();
+        g.beginPath(); g.ellipse(cx+rx*.30,cy-1,rx*.34,ry*.58,.08,0,Math.PI*2); g.fill();
+      }else if(kind === 1){
+        // ふくらみのある綿雲
+        const rx = 58 + Math.random()*36;
+        const ry = 24 + Math.random()*14;
+        const grad = g.createRadialGradient(cx-rx*.2, cy-ry*.2, 6, cx, cy, rx*1.08);
+        grad.addColorStop(0,'rgba(255,255,255,.30)');
+        grad.addColorStop(.62,'rgba(255,255,255,.16)');
+        grad.addColorStop(1,'rgba(255,255,255,0)');
+        g.fillStyle = grad;
+        [[0,0,1,1],[-.46,.10,.50,.74],[.36,.12,.46,.68],[-.08,-.18,.42,.58]].forEach(([ox,oy,sx,sy])=>{
+          g.beginPath();
+          g.ellipse(cx+rx*ox, cy+ry*oy, rx*sx, ry*sy, 0, 0, Math.PI*2);
+          g.fill();
+        });
+      }else{
+        // 小さなちぎれ雲
+        const rx = 34 + Math.random()*20;
+        const ry = 14 + Math.random()*8;
+        const grad = g.createRadialGradient(cx-rx*.1, cy-ry*.1, 4, cx, cy, rx*1.0);
+        grad.addColorStop(0,'rgba(255,255,255,.24)');
+        grad.addColorStop(.58,'rgba(255,255,255,.11)');
+        grad.addColorStop(1,'rgba(255,255,255,0)');
+        g.fillStyle = grad;
+        g.beginPath(); g.ellipse(cx,cy,rx,ry,.06,0,Math.PI*2); g.fill();
+        g.beginPath(); g.ellipse(cx-rx*.40,cy+2,rx*.28,ry*.54,-.20,0,Math.PI*2); g.fill();
+      }
     }
 
     // 下端を少し霞ませる
@@ -2254,6 +2299,20 @@
       // 街中の遠景ビル：箱メッシュはそのまま、窓・横ライン・霞はCanvasTextureで表現。
       // 窓の3D Meshは追加しないため、見た目の密度を上げても描画負荷を抑える。
       [-1,1].forEach(side=>{
+        // ビル群の足元に灰色の道路・舗装帯を敷き、隙間から空色が見えないようにする
+        const roadMatNear = new THREE.MeshStandardMaterial({color:0x83888b, roughness:.96});
+        const roadMatFar = new THREE.MeshStandardMaterial({color:0x6c7276, roughness:.96});
+        const apronNear = new THREE.Mesh(new THREE.BoxGeometry(13.0,.03,164), roadMatNear);
+        apronNear.position.set(side*25.0,.016,z+2);
+        apronNear.rotation.z = side*.008;
+        apronNear.receiveShadow = false;
+        world.add(apronNear);
+        const apronFar = new THREE.Mesh(new THREE.BoxGeometry(16.0,.028,176), roadMatFar);
+        apronFar.position.set(side*39.5,.014,z+4);
+        apronFar.rotation.z = side*.006;
+        apronFar.receiveShadow = false;
+        world.add(apronFar);
+
         for(let i=0;i<5;i++){
           const w = 8 + Math.random()*12;
           const h = 16 + Math.random()*34;
@@ -3668,7 +3727,7 @@
   const CITY_TUNNEL_S = 1760;
   const CITY_TUNNEL_LENGTH = 72;
   const RURAL_TUNNEL_S = 4060;
-  const RURAL_TUNNEL_LENGTH = 92;
+  const RURAL_TUNNEL_LENGTH = 156;
 
   let tunnelBrickTex = null;
   let tunnelConcreteTex = null;
@@ -4560,8 +4619,19 @@
     const hillBodyMat = new THREE.MeshStandardMaterial({color:0x73915e, roughness:.98});
     const slopeMat = new THREE.MeshStandardMaterial({color:0x5c7e48, roughness:.98});
     const soilMat = new THREE.MeshStandardMaterial({color:0x6d6856, roughness:.96});
+    const vergeMat = new THREE.MeshStandardMaterial({color:0x6f8e54, roughness:.98});
 
     const zMid = zStart - length/2;
+
+    // トンネル前後と脇に草地を広く敷き、空色が地面として見えないようにする
+    [-1,1].forEach(side=>{
+      const verge = new THREE.Mesh(new THREE.BoxGeometry(3.0,.04,length+18), vergeMat);
+      verge.position.set(side*6.9,.02,zMid-0.5);
+      world.add(verge);
+      const shoulder = new THREE.Mesh(new THREE.BoxGeometry(7.8,.035,length+24), vergeMat);
+      shoulder.position.set(side*16.4,.018,zMid-0.5);
+      world.add(shoulder);
+    });
 
     const hillVegetation = new THREE.Mesh(new THREE.PlaneGeometry(19.8, length+13.0), getTunnelTopVegetationMat());
     hillVegetation.position.set(0,11.05,zMid-0.5);
@@ -4611,6 +4681,12 @@
       forestNearLow.rotation.y = side>0 ? -Math.PI*0.58 : Math.PI*0.58;
       forestNearLow.renderOrder = 5;
       world.add(forestNearLow);
+      // 入口脇の透け対策。トンネル口には被せず、左右外側だけ草の板を足す
+      const portalGrass = new THREE.Mesh(new THREE.PlaneGeometry(4.2, 4.0), getTunnelForestMat());
+      portalGrass.position.set(side*10.9, 4.2, zStart + 0.85);
+      portalGrass.rotation.y = side>0 ? -Math.PI*0.46 : Math.PI*0.46;
+      portalGrass.renderOrder = 6;
+      world.add(portalGrass);
     });
 
     const exitHill = new THREE.Mesh(new THREE.PlaneGeometry(58.0, 15.4), getTunnelHillMat());
@@ -4644,6 +4720,11 @@
       forestNearLow.rotation.y = side>0 ? Math.PI*0.58 : -Math.PI*0.58;
       forestNearLow.renderOrder = 5;
       world.add(forestNearLow);
+      const portalGrass = new THREE.Mesh(new THREE.PlaneGeometry(4.2, 4.0), getTunnelForestMat());
+      portalGrass.position.set(side*10.9, 4.2, zStart - length - 0.85);
+      portalGrass.rotation.y = side>0 ? Math.PI*0.46 : -Math.PI*0.46;
+      portalGrass.renderOrder = 6;
+      world.add(portalGrass);
     });
 
     const exitGlow = new THREE.Mesh(new THREE.PlaneGeometry(8.0,4.8), getTunnelPortalLightMat(.22));
