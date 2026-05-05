@@ -784,36 +784,246 @@
   const world = new THREE.Group();
   scene.add(world);
 
+  // 線路の軽量・写真風テクスチャ化
+  // 以前は1区間ごとに「小石70個＋枕木23本＋レール光沢材」を作っていたため、
+  // 走行距離が伸びるほどMesh数が増えやすかった。
+  // ここではバラスト・枕木・影・草のにじみをCanvasTextureへ焼き込み、
+  // レールだけを細い3Dメッシュで残す。後方へ流れる立体感は、実体レール＋連続テクスチャで維持する。
+  function makeBallastTexture(){
+    const W = 512, H = 2048;
+    const c = document.createElement('canvas');
+    c.width = W; c.height = H;
+    const g = c.getContext('2d');
+    let seed = 246813579;
+    const rnd = () => {
+      seed += 0x6D2B79F5;
+      let t = seed;
+      t = Math.imul(t ^ (t >>> 15), t | 1);
+      t ^= t + Math.imul(t ^ (t >>> 7), t | 61);
+      return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+    };
+
+    // 土と砕石の下地。添付写真の茶〜灰色のバラストに寄せる。
+    const bg = g.createLinearGradient(0,0,W,H);
+    bg.addColorStop(0,'#625449');
+    bg.addColorStop(.42,'#74685c');
+    bg.addColorStop(.70,'#534b45');
+    bg.addColorStop(1,'#807568');
+    g.fillStyle = bg;
+    g.fillRect(0,0,W,H);
+
+    // 両脇のバラスト肩。軌道中心より少し灰色を増やす。
+    const shoulder = g.createLinearGradient(0,0,W,0);
+    shoulder.addColorStop(0,'rgba(92,94,88,.82)');
+    shoulder.addColorStop(.18,'rgba(92,94,88,.36)');
+    shoulder.addColorStop(.50,'rgba(70,55,45,0)');
+    shoulder.addColorStop(.82,'rgba(92,94,88,.36)');
+    shoulder.addColorStop(1,'rgba(92,94,88,.82)');
+    g.fillStyle = shoulder;
+    g.fillRect(0,0,W,H);
+
+    // 細かい砕石を大量に2Dで描く。Meshではないので非常に軽い。
+    const stones = ['#2e2b28','#3d3833','#574c42','#786a5c','#958a7b','#b2aa9d','#4a4745','#6b5847'];
+    for(let i=0;i<14500;i++){
+      const x = rnd()*W;
+      const y = rnd()*H;
+      const size = 1.0 + rnd()*4.8;
+      const flat = .45 + rnd()*1.2;
+      g.save();
+      g.translate(x,y);
+      g.rotate(rnd()*Math.PI);
+      g.fillStyle = stones[(rnd()*stones.length)|0];
+      g.globalAlpha = .54 + rnd()*.44;
+      g.fillRect(-size*.5,-flat*.5,size,flat);
+      if(rnd()<.22){
+        g.fillStyle = 'rgba(255,255,255,.18)';
+        g.fillRect(-size*.42,-flat*.42,size*.42,Math.max(.4,flat*.28));
+      }
+      g.restore();
+    }
+
+    // レール下の濃い影筋。実レールと重なって奥行きが出る。
+    [-.82,.82].forEach(rx=>{
+      const x = W/2 + rx/3.1*W;
+      const railShadow = g.createLinearGradient(x-18,0,x+18,0);
+      railShadow.addColorStop(0,'rgba(0,0,0,0)');
+      railShadow.addColorStop(.42,'rgba(0,0,0,.42)');
+      railShadow.addColorStop(.58,'rgba(0,0,0,.42)');
+      railShadow.addColorStop(1,'rgba(0,0,0,0)');
+      g.fillStyle = railShadow;
+      g.fillRect(x-20,0,40,H);
+    });
+
+    // 枕木。立体Meshをやめ、影・割れ・汚れ・金具をテクスチャへ焼き込む。
+    const sleeperPitch = 86;
+    for(let y=-20;y<H+60;y+=sleeperPitch){
+      const jitter = (rnd()-.5)*5;
+      const sy = y + jitter;
+      const wood = g.createLinearGradient(0,sy-13,0,sy+15);
+      wood.addColorStop(0,'#3b2b23');
+      wood.addColorStop(.18,'#6a5140');
+      wood.addColorStop(.55,'#4b382e');
+      wood.addColorStop(1,'#221916');
+      g.fillStyle = 'rgba(0,0,0,.34)';
+      g.fillRect(96, sy+12, 320, 8);
+      g.fillStyle = wood;
+      g.fillRect(104, sy-12, 304, 25);
+      g.fillStyle = 'rgba(255,255,255,.10)';
+      g.fillRect(108, sy-9, 294, 2);
+      g.fillStyle = 'rgba(0,0,0,.24)';
+      g.fillRect(104, sy+9, 304, 4);
+      for(let k=0;k<9;k++){
+        g.strokeStyle = `rgba(25,18,14,${.18+rnd()*.22})`;
+        g.lineWidth = .7 + rnd()*1.5;
+        const yy = sy - 8 + rnd()*16;
+        g.beginPath();
+        g.moveTo(110+rnd()*30, yy);
+        g.bezierCurveTo(170+rnd()*40, yy+(rnd()-.5)*5, 250+rnd()*55, yy+(rnd()-.5)*6, 400-rnd()*35, yy+(rnd()-.5)*3);
+        g.stroke();
+      }
+      // 締結装置を点描。近距離で写真っぽく見えるがMeshではない。
+      [-.82,.82].forEach(rx=>{
+        const xx = W/2 + rx/3.1*W;
+        g.fillStyle = 'rgba(18,18,18,.70)';
+        g.fillRect(xx-21, sy-9, 10, 18);
+        g.fillRect(xx+11, sy-9, 10, 18);
+        g.fillStyle = 'rgba(170,160,145,.42)';
+        g.fillRect(xx-20, sy-8, 8, 3);
+        g.fillRect(xx+12, sy-8, 8, 3);
+      });
+    }
+
+    // 草・土の混ざり。線路脇が単調にならないように薄く入れる。
+    for(let i=0;i<950;i++){
+      const side = rnd()<.5 ? 0 : 1;
+      const x = side ? W*(.82+rnd()*.17) : W*(rnd()*.18);
+      const y = rnd()*H;
+      const len = 6 + rnd()*26;
+      g.strokeStyle = `rgba(${45+(rnd()*35)|0},${85+(rnd()*55)|0},${35+(rnd()*25)|0},${.18+rnd()*.28})`;
+      g.lineWidth = .8 + rnd()*1.6;
+      g.beginPath();
+      g.moveTo(x,y);
+      g.lineTo(x+(rnd()-.5)*10,y-len);
+      g.stroke();
+    }
+
+    // 微細ノイズで写真感を足す。
+    const img = g.getImageData(0,0,W,H);
+    for(let i=0;i<img.data.length;i+=4){
+      const n = (rnd()-.5)*18;
+      img.data[i] = Math.max(0,Math.min(255,img.data[i]+n));
+      img.data[i+1] = Math.max(0,Math.min(255,img.data[i+1]+n));
+      img.data[i+2] = Math.max(0,Math.min(255,img.data[i+2]+n));
+    }
+    g.putImageData(img,0,0);
+
+    const tex = new THREE.CanvasTexture(c);
+    tex.wrapS = tex.wrapT = THREE.RepeatWrapping;
+    tex.repeat.set(1,1);
+    tex.anisotropy = Math.min(8, renderer.capabilities.getMaxAnisotropy ? renderer.capabilities.getMaxAnisotropy() : 1);
+    tex.minFilter = THREE.LinearMipmapLinearFilter;
+    tex.magFilter = THREE.LinearFilter;
+    tex.generateMipmaps = true;
+    tex.userData.sharedTexture = true;
+    tex.needsUpdate = true;
+    return tex;
+  }
+
+  function makeWideBallastTexture(){
+    const W = 768, H = 1536;
+    const c = document.createElement('canvas');
+    c.width = W; c.height = H;
+    const g = c.getContext('2d');
+    let seed = 135792468;
+    const rnd = () => {
+      seed += 0x6D2B79F5;
+      let t = seed;
+      t = Math.imul(t ^ (t >>> 15), t | 1);
+      t ^= t + Math.imul(t ^ (t >>> 7), t | 61);
+      return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+    };
+    const bg = g.createLinearGradient(0,0,W,H);
+    bg.addColorStop(0,'#5b5550'); bg.addColorStop(.45,'#786f65'); bg.addColorStop(1,'#4d4742');
+    g.fillStyle = bg; g.fillRect(0,0,W,H);
+    const center = g.createRadialGradient(W/2,H/2,20,W/2,H/2,W*.66);
+    center.addColorStop(0,'rgba(73,58,45,.48)');
+    center.addColorStop(.62,'rgba(73,58,45,.18)');
+    center.addColorStop(1,'rgba(120,126,118,.50)');
+    g.fillStyle = center; g.fillRect(0,0,W,H);
+    const colors = ['#282727','#3b3835','#534d47','#6f665d','#8a8177','#aaa297','#71604f'];
+    for(let i=0;i<18000;i++){
+      const x=rnd()*W, y=rnd()*H, s=1+rnd()*5.6, h=.6+rnd()*2.0;
+      g.save(); g.translate(x,y); g.rotate(rnd()*Math.PI);
+      g.fillStyle=colors[(rnd()*colors.length)|0]; g.globalAlpha=.45+rnd()*.45;
+      g.fillRect(-s/2,-h/2,s,h); g.restore();
+    }
+    const tex = new THREE.CanvasTexture(c);
+    tex.wrapS = tex.wrapT = THREE.RepeatWrapping;
+    tex.repeat.set(1,1);
+    tex.anisotropy = Math.min(8, renderer.capabilities.getMaxAnisotropy ? renderer.capabilities.getMaxAnisotropy() : 1);
+    tex.minFilter = THREE.LinearMipmapLinearFilter;
+    tex.magFilter = THREE.LinearFilter;
+    tex.generateMipmaps = true;
+    tex.userData.sharedTexture = true;
+    tex.needsUpdate = true;
+    return tex;
+  }
+
+  const ballastTextureMat = new THREE.MeshStandardMaterial({
+    map: makeWideBallastTexture(),
+    roughness:.98,
+    metalness:.0,
+    polygonOffset:true,
+    polygonOffsetFactor:1,
+    polygonOffsetUnits:1
+  });
+  const trackTextureMat = new THREE.MeshStandardMaterial({
+    map: makeBallastTexture(),
+    roughness:.96,
+    metalness:.0,
+    polygonOffset:true,
+    polygonOffsetFactor:-1,
+    polygonOffsetUnits:-1
+  });
+  const railShineMat = new THREE.MeshStandardMaterial({color:0xb6aaa1,roughness:.28,metalness:.78});
+  markSharedMaterial(ballastTextureMat);
+  markSharedMaterial(trackTextureMat);
+  markSharedMaterial(railShineMat);
+
+  const ballastPlaneGeo = new THREE.PlaneGeometry(12.6, 34.2, 1, 1);
+  const trackPlaneGeo = new THREE.PlaneGeometry(2.95, 34.2, 1, 1);
+  const railGeoShared = new THREE.BoxGeometry(.12,.14,34.2);
+  const railShineGeoShared = new THREE.BoxGeometry(.08,.025,34.2);
+  [ballastPlaneGeo, trackPlaneGeo, railGeoShared, railShineGeoShared].forEach(g=>g.userData.sharedGeometry = true);
+
   function addBallast(z){
-    const g = new THREE.BoxGeometry(12, .28, 34);
-    const m = new THREE.Mesh(g, mat.ballast);
-    m.position.set(0, -0.16, z);
+    const m = new THREE.Mesh(ballastPlaneGeo, ballastTextureMat);
+    m.rotation.x = -Math.PI/2;
+    m.position.set(0, .006, z);
     m.receiveShadow = true;
     world.add(m);
-    for(let i=0;i<70;i++){
-      const stone = new THREE.Mesh(
-        new THREE.BoxGeometry(.08+Math.random()*.18,.025+Math.random()*.05,.08+Math.random()*.2),
-        mat.ballast
-      );
-      stone.position.set((Math.random()-.5)*11.4, .02, z-16+Math.random()*32);
-      stone.rotation.y=Math.random()*Math.PI;
-      world.add(stone);
-    }
   }
 
   function addTrackSegment(z, x=0){
-    const railGeo = new THREE.BoxGeometry(.12,.14,34);
+    const bed = new THREE.Mesh(trackPlaneGeo, trackTextureMat);
+    bed.rotation.x = -Math.PI/2;
+    bed.position.set(x, .024, z);
+    bed.receiveShadow = true;
+    world.add(bed);
+
     [-.82,.82].forEach(rx=>{
-      const r=new THREE.Mesh(railGeo, mat.rail);
-      r.position.set(x+rx,.16,z); r.castShadow=true; r.receiveShadow=true; world.add(r);
-      const shine=new THREE.Mesh(new THREE.BoxGeometry(.08,.025,34), new THREE.MeshStandardMaterial({color:0xb6aaa1,roughness:.3,metalness:.75}));
-      shine.position.set(x+rx,.245,z); world.add(shine);
+      const r=new THREE.Mesh(railGeoShared, mat.rail);
+      r.position.set(x+rx,.16,z);
+      r.castShadow=true;
+      r.receiveShadow=true;
+      world.add(r);
+
+      const shine=new THREE.Mesh(railShineGeoShared, railShineMat);
+      shine.position.set(x+rx,.245,z);
+      shine.castShadow=false;
+      shine.receiveShadow=false;
+      world.add(shine);
     });
-    for(let i=0;i<23;i++){
-      const s=new THREE.Mesh(new THREE.BoxGeometry(2.25,.12,.18), mat.sleeper);
-      s.position.set(x,.055,z-16+i*1.45);
-      s.receiveShadow=true; s.castShadow=true; world.add(s);
-    }
   }
 
   function addCatenary(z){
@@ -1073,13 +1283,164 @@
     }
   }
 
-  // 写真の街路樹に近い形：丸い球だけの木をやめ、幹・枝・細かな葉房を重ねて作る
+  // 近距離の木：幹・太枝は3D、葉は濃い緑の半透明テクスチャ板を交差配置して軽量化。
+  // ビル用テクスチャは維持したまま、木だけを3D＋CanvasTextureのハイブリッドにする。
+  function makeLeafCrownTexture(mode='deep'){
+    const W = 420, H = 420;
+    const c = document.createElement('canvas');
+    c.width = W; c.height = H;
+    const g = c.getContext('2d');
+
+    let seed = mode === 'yellow' ? 97337 : mode === 'bright' ? 49157 : 24691;
+    const rnd = () => {
+      seed += 0x6D2B79F5;
+      let t = seed;
+      t = Math.imul(t ^ (t >>> 15), t | 1);
+      t ^= t + Math.imul(t ^ (t >>> 7), t | 61);
+      return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+    };
+
+    const palettes = {
+      deep:   ['#0a260d','#0f3411','#154615','#1b591b','#236e20','#2c8128','#379431','#43a63c'],
+      bright: ['#123413','#194919','#215f20','#2d7828','#3d9333','#50ac41','#69c65a','#84db77'],
+      yellow: ['#576d16','#73881d','#8ea322','#adc033','#c9cf4b','#e0d86d','#efe79a']
+    };
+    const pal = palettes[mode] || palettes.deep;
+
+    g.clearRect(0,0,W,H);
+
+    // 不規則な樹冠シルエットを複数の塊で作る。丸い1個の塊にしない。
+    const blobs = [
+      [W*.50,H*.58,90,98], [W*.40,H*.54,78,84], [W*.61,H*.54,82,86],
+      [W*.33,H*.60,64,72], [W*.68,H*.61,62,70], [W*.48,H*.44,74,70],
+      [W*.57,H*.42,60,58], [W*.40,H*.43,58,56], [W*.49,H*.69,68,56]
+    ];
+    blobs.forEach((b, i)=>{
+      const grad = g.createRadialGradient(b[0]-b[2]*.18,b[1]-b[3]*.20,4,b[0],b[1],Math.max(b[2],b[3]));
+      const c1 = pal[(i*2)%pal.length];
+      const c2 = pal[(i*2+2)%pal.length];
+      grad.addColorStop(0,c1+'ee');
+      grad.addColorStop(.56,c2+'d8');
+      grad.addColorStop(1,'rgba(0,0,0,0)');
+      g.globalAlpha = .30;
+      g.fillStyle = grad;
+      g.beginPath();
+      g.ellipse(b[0],b[1],b[2],b[3],(i%3-1)*.16,0,Math.PI*2);
+      g.fill();
+    });
+
+    // 葉群の面を大量に描き込んで密度を上げる。
+    for(let i=0;i<3400;i++){
+      const cluster = blobs[Math.floor(rnd()*blobs.length)];
+      const x = cluster[0] + (rnd()-.5)*cluster[2]*1.6;
+      const y = cluster[1] + (rnd()-.5)*cluster[3]*1.6;
+      const dx = (x-cluster[0])/cluster[2];
+      const dy = (y-cluster[1])/cluster[3];
+      if(dx*dx + dy*dy > 1.0 + rnd()*.28) continue;
+      const col = pal[Math.floor(rnd()*pal.length)];
+      const edge = Math.max(0, 1 - (dx*dx + dy*dy));
+      const len = 2.1 + rnd()*5.6;
+      g.save();
+      g.translate(x,y);
+      g.rotate(rnd()*Math.PI);
+      g.globalAlpha = .22 + edge*.34 + rnd()*.12;
+      g.fillStyle = col;
+      g.beginPath();
+      g.ellipse(0,0,len*(.9+rnd()*.45),len*(.22+rnd()*.22),0,0,Math.PI*2);
+      g.fill();
+      if(rnd()<.14){
+        g.globalAlpha *= .55;
+        g.fillStyle = mode==='yellow' ? 'rgba(255,244,198,.44)' : 'rgba(218,255,191,.18)';
+        g.beginPath();
+        g.ellipse(-len*.12,-len*.06,len*.22,len*.10,0,0,Math.PI*2);
+        g.fill();
+      }
+      g.restore();
+    }
+
+    // 斑点状の濃い群葉でふさふさ感を追加。
+    for(let i=0;i<260;i++){
+      const cluster = blobs[Math.floor(rnd()*blobs.length)];
+      const x = cluster[0] + (rnd()-.5)*cluster[2]*1.2;
+      const y = cluster[1] + (rnd()-.5)*cluster[3]*1.2;
+      const rx = 8 + rnd()*22;
+      const ry = 6 + rnd()*18;
+      const grad = g.createRadialGradient(x-rx*.24,y-ry*.28,1,x,y,Math.max(rx,ry));
+      grad.addColorStop(0,pal[Math.floor(rnd()*pal.length)]+'f4');
+      grad.addColorStop(.72,pal[Math.floor(rnd()*pal.length)]+'96');
+      grad.addColorStop(1,'rgba(0,0,0,0)');
+      g.globalAlpha = .26 + rnd()*.16;
+      g.fillStyle = grad;
+      g.beginPath();
+      g.ellipse(x,y,rx,ry,rnd()*Math.PI,0,Math.PI*2);
+      g.fill();
+    }
+
+    // 枝影をうっすら焼き込み、のっぺり感を減らす。
+    g.lineCap = 'round';
+    for(let i=0;i<68;i++){
+      const sx = W*.50 + (rnd()-.5)*56;
+      const sy = H*.74 + (rnd()-.5)*20;
+      const ex = W*.50 + (rnd()-.5)*170;
+      const ey = H*.48 + (rnd()-.5)*132;
+      g.globalAlpha = .42;
+      g.strokeStyle = mode==='yellow' ? 'rgba(72,48,18,.12)' : 'rgba(22,16,10,.16)';
+      g.lineWidth = .6 + rnd()*1.4;
+      g.beginPath();
+      g.moveTo(sx,sy);
+      g.quadraticCurveTo((sx+ex)/2+(rnd()-.5)*22,(sy+ey)/2-rnd()*26,ex,ey);
+      g.stroke();
+    }
+
+    // 上部ハイライトと下部の濃い影。
+    g.globalCompositeOperation = 'source-atop';
+    const hi = g.createLinearGradient(0,0,0,H);
+    hi.addColorStop(0,'rgba(255,255,255,.18)');
+    hi.addColorStop(.20,'rgba(255,255,255,.08)');
+    hi.addColorStop(.48,'rgba(255,255,255,0)');
+    hi.addColorStop(1,'rgba(255,255,255,0)');
+    g.fillStyle = hi;
+    g.fillRect(0,0,W,H);
+    const shade = g.createLinearGradient(0,0,0,H);
+    shade.addColorStop(0,'rgba(0,0,0,0)');
+    shade.addColorStop(.40,'rgba(0,0,0,.02)');
+    shade.addColorStop(1,'rgba(0,18,0,.44)');
+    g.fillStyle = shade;
+    g.fillRect(0,0,W,H);
+    g.globalCompositeOperation = 'source-over';
+
+    const tex = new THREE.CanvasTexture(c);
+    tex.anisotropy = Math.min(8, renderer.capabilities.getMaxAnisotropy ? renderer.capabilities.getMaxAnisotropy() : 1);
+    tex.minFilter = THREE.LinearMipmapLinearFilter;
+    tex.magFilter = THREE.LinearFilter;
+    tex.generateMipmaps = true;
+    tex.userData.sharedTexture = true;
+    tex.needsUpdate = true;
+    return tex;
+  }
+
+  const leafTextures = {
+    deep: makeLeafCrownTexture('deep'),
+    bright: makeLeafCrownTexture('bright'),
+    yellow: makeLeafCrownTexture('yellow')
+  };
+
+  const sharedTreeGeos = {
+    leafPlane: new THREE.PlaneGeometry(1,1),
+    leafCore: new THREE.IcosahedronGeometry(1, 1),
+    base: new THREE.BoxGeometry(1,1,1)
+  };
+  Object.values(sharedTreeGeos).forEach(g=>g.userData.sharedGeometry = true);
+
   const treeMats = {
-    trunk: new THREE.MeshStandardMaterial({color:0x5a4430, roughness:.88, metalness:.02}),
-    barkDark: new THREE.MeshStandardMaterial({color:0x362719, roughness:.92, metalness:.01}),
-    leafA: new THREE.MeshStandardMaterial({color:0x2f6f33, roughness:.92}),
-    leafB: new THREE.MeshStandardMaterial({color:0x3f8a3d, roughness:.9}),
-    leafC: new THREE.MeshStandardMaterial({color:0x6fa646, roughness:.88})
+    trunk: new THREE.MeshStandardMaterial({color:0x5a3f28, roughness:.92, metalness:.01}),
+    barkDark: new THREE.MeshStandardMaterial({color:0x2f2115, roughness:.95, metalness:.01}),
+    leafCoreA: new THREE.MeshStandardMaterial({color:0x0f3816, roughness:.96}),
+    leafCoreB: new THREE.MeshStandardMaterial({color:0x1d6525, roughness:.94}),
+    leafCoreC: new THREE.MeshStandardMaterial({color:0x4d7b1b, roughness:.94}),
+    leafBillboardDeep: new THREE.MeshBasicMaterial({map:leafTextures.deep, color:0xffffff, transparent:true, alphaTest:.05, side:THREE.DoubleSide, depthWrite:false, fog:true}),
+    leafBillboardBright: new THREE.MeshBasicMaterial({map:leafTextures.bright, color:0xffffff, transparent:true, alphaTest:.05, side:THREE.DoubleSide, depthWrite:false, fog:true}),
+    leafBillboardYellow: new THREE.MeshBasicMaterial({map:leafTextures.yellow, color:0xffffff, transparent:true, alphaTest:.06, side:THREE.DoubleSide, depthWrite:false, fog:true})
   };
   Object.values(treeMats).forEach(markSharedMaterial);
 
@@ -1097,62 +1458,97 @@
     return c;
   }
 
-  function addLeafClump(x,y,z,scale,matLeaf){
-    // 球そのものではなく、上下に少し伸びた不規則な葉の塊にする
-    const geo = new THREE.SphereGeometry(scale, 12, 9);
-    const leaf = new THREE.Mesh(geo, matLeaf);
-    leaf.scale.set(.70 + Math.random()*.28, 1.00 + Math.random()*.42, .58 + Math.random()*.28);
+  function addLeafBillboard(x,y,z,w,h,rotY,matLeaf,rotZ=0){
+    const leaf = new THREE.Mesh(sharedTreeGeos.leafPlane, matLeaf);
     leaf.position.set(x,y,z);
-    leaf.rotation.set(Math.random()*.25, Math.random()*Math.PI, (Math.random()-.5)*.18);
+    leaf.scale.set(w,h,1);
+    leaf.rotation.set(0,rotY,rotZ);
+    leaf.renderOrder = 2;
+    leaf.castShadow = false;
+    leaf.receiveShadow = false;
+    world.add(leaf);
+    return leaf;
+  }
+
+  function addLeafCore(x,y,z,scale,matLeaf){
+    const leaf = new THREE.Mesh(sharedTreeGeos.leafCore, matLeaf);
+    leaf.scale.set(scale*(.34+Math.random()*.10), scale*(.46+Math.random()*.14), scale*(.30+Math.random()*.10));
+    leaf.position.set(x,y,z);
+    leaf.rotation.set(Math.random()*Math.PI, Math.random()*Math.PI, Math.random()*Math.PI);
     leaf.castShadow = true;
-    leaf.receiveShadow = true;
+    leaf.receiveShadow = false;
     world.add(leaf);
     return leaf;
   }
 
   function addRealisticTree(x,z,scale=1,side=1){
     const baseY = 0;
-    const h = (4.0 + Math.random()*1.2) * scale;
-    const lean = side * (.10 + Math.random()*.16) * scale;
-    const trunkTop = [x + lean, baseY + h*.72, z + (Math.random()-.5)*.28];
+    const h = (4.7 + Math.random()*0.9) * scale;
+    const lean = side * (.03 + Math.random()*.06) * scale;
+    const trunkTop = [x + lean, baseY + h*.72, z + (Math.random()-.5)*.12];
 
-    // 幹：写真のように細めで上に伸びる
-    cylBetween([x,baseY+.05,z], trunkTop, .13*scale, treeMats.trunk, 10);
-    cylBetween([x+.035*side,baseY+.15,z+.02], [trunkTop[0]+.03*side,trunkTop[1],trunkTop[2]], .055*scale, treeMats.barkDark, 8);
+    // 幹は3Dで維持。街路樹らしく真っ直ぐで、上で枝分かれさせる。
+    cylBetween([x,baseY+.05,z], trunkTop, .18*scale, treeMats.trunk, 10);
+    cylBetween([x+.03*side,baseY+.14,z+.015], [trunkTop[0]+.025*side,trunkTop[1],trunkTop[2]], .072*scale, treeMats.barkDark, 8);
 
-    // 枝を複数方向に伸ばす
-    const branchEnds = [];
-    const branchCount = 6 + Math.floor(Math.random()*3);
+    const branchStarts = [];
+    const branchCount = 6 + Math.floor(Math.random()*2);
     for(let i=0;i<branchCount;i++){
-      const t = .42 + i/(branchCount-1)*.38;
-      const start = [x + lean*t*.82, baseY + h*t, z];
-      const dir = (i%2===0 ? -1 : 1) * side;
-      const out = (.40 + Math.random()*.68) * scale * dir;
-      const up = (.42 + Math.random()*.62) * scale;
-      const dz = (Math.random()-.5) * .75 * scale;
+      const t = .56 + i/(branchCount-1)*.16;
+      const start = [x + lean*t*.72, baseY + h*t, z + (Math.random()-.5)*.05];
+      const dir = (i - (branchCount-1)/2) / ((branchCount-1)/2 || 1);
+      const out = dir * (.58 + Math.random()*.38) * scale;
+      const up = (.24 + Math.random()*.30) * scale;
+      const dz = (Math.random()-.5) * .42 * scale;
       const end = [start[0]+out, start[1]+up, start[2]+dz];
-      cylBetween(start,end,.045*scale, treeMats.trunk,8);
-      branchEnds.push(end);
+      cylBetween(start,end,.028*scale, treeMats.trunk,7);
+      branchStarts.push(end);
     }
 
-    // 葉は縦長の楕円形クラウン。銀杏並木・街路樹っぽく上方向に密度を持たせる
-    const topY = baseY + h*.92;
-    const leafMats = [treeMats.leafA, treeMats.leafB, treeMats.leafC];
-    for(let i=0;i<15;i++){
-      const angle = (i/15)*Math.PI*2 + Math.random()*.45;
-      const radius = (.18 + Math.random()*.78) * scale * (i<5?.55:1);
-      const lx = trunkTop[0] + Math.cos(angle)*radius*.72;
-      const ly = topY - Math.random()*1.22*scale + (i%4)*.08*scale;
-      const lz = trunkTop[2] + Math.sin(angle)*radius*.62;
-      const s = (.40 + Math.random()*.34) * scale;
-      addLeafClump(lx,ly,lz,s,leafMats[i%leafMats.length]);
-    }
-    branchEnds.forEach((b,i)=>{
-      addLeafClump(b[0], b[1]+.22*scale, b[2], (.34+Math.random()*.24)*scale, leafMats[(i+1)%leafMats.length]);
+    // tree2 のように、上部に葉を密集させた一体感ある樹冠を作る。
+    const crownCenterY = baseY + h*.88;
+    const crownW = (3.05 + Math.random()*.30) * scale;
+    const crownH = (2.95 + Math.random()*.22) * scale;
+    const matMain = Math.random()<.06 ? treeMats.leafBillboardYellow : treeMats.leafBillboardDeep;
+    const matSub  = Math.random()<.42 ? treeMats.leafBillboardBright : treeMats.leafBillboardDeep;
+
+    const boards = [
+      [ 0.00,  0.00,  0.00, 1.04, 1.00,  Math.PI/2,                    matMain,  0.00],
+      [ 0.00,  0.04,  0.00, 1.00, 0.98,  Math.PI/2 + Math.PI/3,       matSub,   0.01],
+      [ 0.00,  0.05,  0.00, 1.00, 0.98,  Math.PI/2 - Math.PI/3,       matMain, -0.01],
+      [ 0.00, -0.16,  0.00, 0.94, 0.78,  Math.PI/2 + Math.PI/2,       matMain,  0.00],
+      [-0.34*side, 0.03,  0.12, 0.78, 0.80,  Math.PI/2 + Math.PI/6,   matSub,  -0.04],
+      [ 0.34*side, 0.03, -0.12, 0.78, 0.80,  Math.PI/2 - Math.PI/6,   matSub,   0.04],
+      [ 0.00,  0.28,  0.02, 0.76, 0.70,  Math.PI/2 + Math.PI/4,       matMain,  0.02],
+      [ 0.00,  0.26, -0.02, 0.76, 0.70,  Math.PI/2 - Math.PI/4,       matMain, -0.02]
+    ];
+    boards.forEach(b=>{
+      addLeafBillboard(
+        trunkTop[0] + b[0]*scale,
+        crownCenterY + b[1]*scale,
+        trunkTop[2] + b[2]*scale,
+        crownW*b[3],
+        crownH*b[4],
+        b[5], b[6], b[7]
+      );
     });
 
-    // 下枝が見えるよう、幹の周りは少し葉を減らし、根元に植樹帯を追加
-    const base = new THREE.Mesh(new THREE.BoxGeometry(.72*scale,.05,.72*scale), new THREE.MeshStandardMaterial({color:0x315a2a,roughness:.95}));
+    // 3D葉芯は外から見えすぎないよう内部だけに少量。
+    const coreMats = [treeMats.leafCoreA, treeMats.leafCoreB, treeMats.leafCoreC];
+    for(let i=0;i<4;i++){
+      const angle = (i/4)*Math.PI*2 + Math.random()*.18;
+      const radius = (.12 + Math.random()*.22) * scale;
+      const lx = trunkTop[0] + Math.cos(angle)*radius*.42;
+      const ly = crownCenterY - .02*scale + Math.sin(i*1.1)*.08*scale + Math.random()*.10*scale;
+      const lz = trunkTop[2] + Math.sin(angle)*radius*.34;
+      addLeafCore(lx,ly,lz,(.13+Math.random()*.04)*scale,coreMats[i%coreMats.length]);
+    }
+    branchStarts.slice(0,4).forEach((b,i)=>{
+      addLeafCore(b[0], b[1]+.03*scale, b[2], (.11+Math.random()*.04)*scale, coreMats[(i+1)%coreMats.length]);
+    });
+
+    const base = new THREE.Mesh(sharedTreeGeos.base, new THREE.MeshStandardMaterial({color:0x315a2a,roughness:.95}));
+    base.scale.set(.72*scale,.05,.72*scale);
     base.position.set(x,.035,z);
     world.add(base);
   }
