@@ -519,35 +519,140 @@
     grass: new THREE.MeshStandardMaterial({color:0x2f6f35, roughness:.9})
   };
 
-  function makeWindowTexture(color1, color2){
-    // 軽量版ビル窓テクスチャ：256pxの細かい窓描画をやめ、64pxの単純な横帯＋少数の窓だけにする。
-    // 見た目は「ビルの窓がある」程度に残しつつ、CanvasTextureの容量と描画負荷を削減。
-    const c=document.createElement('canvas');c.width=64;c.height=64;const g=c.getContext('2d');
-    g.fillStyle=color1;g.fillRect(0,0,64,64);
-    g.fillStyle='rgba(0,0,0,.13)';
-    for(let y=0;y<64;y+=16)g.fillRect(0,y,64,1);
-    g.fillStyle=color2;
-    for(let y=7;y<60;y+=16){
-      for(let x=8;x<60;x+=18){
-        if(((x+y)/18|0)%3!==0) g.fillRect(x,y,9,5);
+  function makeWindowTexture(baseColor, glassColor, style='office'){
+    // 高精細・軽量ビル外壁テクスチャ。
+    // 窓をMeshで増やさず、CanvasTexture 1枚に窓・縦横フレーム・反射を描き込む。
+    // 4〜6枚だけを共有するので、窓数を増やしてもビル本体は基本1メッシュのまま。
+    const W = 128, H = 256;
+    const c = document.createElement('canvas');
+    c.width = W; c.height = H;
+    const g = c.getContext('2d');
+
+    // deterministic noise: 毎回Math.randomを使わず、同じ見た目にする
+    let seed = 2166136261;
+    const key = `${baseColor}-${glassColor}-${style}`;
+    for(let i=0;i<key.length;i++) seed = Math.imul(seed ^ key.charCodeAt(i), 16777619);
+    const rnd = () => {
+      seed += 0x6D2B79F5;
+      let t = seed;
+      t = Math.imul(t ^ (t >>> 15), t | 1);
+      t ^= t + Math.imul(t ^ (t >>> 7), t | 61);
+      return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+    };
+
+    // base wall / glass tone
+    const bg = g.createLinearGradient(0,0,W,H);
+    bg.addColorStop(0, baseColor);
+    bg.addColorStop(.55, baseColor);
+    bg.addColorStop(1, 'rgba(0,0,0,.35)');
+    g.fillStyle = bg;
+    g.fillRect(0,0,W,H);
+
+    if(style === 'glass'){
+      // ガラスカーテンウォール：青空反射＋細い銀色マリオン
+      const sky = g.createLinearGradient(0,0,W,H);
+      sky.addColorStop(0,'#8ed4ff');
+      sky.addColorStop(.35,'#2e82d6');
+      sky.addColorStop(.72,'#1d4f90');
+      sky.addColorStop(1,'#0c2a4d');
+      g.fillStyle = sky;
+      g.fillRect(0,0,W,H);
+      for(let y=0;y<H;y+=20){
+        g.fillStyle = 'rgba(255,255,255,.55)'; g.fillRect(0,y,W,1.3);
+        g.fillStyle = 'rgba(0,23,55,.25)'; g.fillRect(0,y+17,W,2);
       }
+      for(let x=0;x<W;x+=14){
+        g.fillStyle = 'rgba(230,245,255,.75)'; g.fillRect(x,0,1.4,H);
+        g.fillStyle = 'rgba(5,30,70,.26)'; g.fillRect(x+10,0,1,H);
+      }
+      for(let i=0;i<18;i++){
+        const x = rnd()*W, y = rnd()*H;
+        const grd = g.createLinearGradient(x-16,y-16,x+18,y+18);
+        grd.addColorStop(0,'rgba(255,255,255,.0)');
+        grd.addColorStop(.45,'rgba(255,255,255,.30)');
+        grd.addColorStop(1,'rgba(255,255,255,.0)');
+        g.fillStyle = grd; g.fillRect(x-18,y-18,38,38);
+      }
+    } else {
+      // 通常オフィス／ホテル／都庁風：外壁パネル＋窓枠を1枚絵にする
+      const colW = style === 'narrow' ? 9 : style === 'hotel' ? 12 : 16;
+      const rowH = style === 'narrow' ? 12 : style === 'hotel' ? 15 : 18;
+      const marginX = style === 'hotel' ? 3 : 4;
+      const marginY = style === 'hotel' ? 3 : 4;
+
+      // 外壁パネル線
+      for(let y=0;y<H;y+=rowH){
+        g.fillStyle='rgba(255,255,255,.18)'; g.fillRect(0,y,W,1);
+        g.fillStyle='rgba(0,0,0,.20)'; g.fillRect(0,y+rowH-1,W,1);
+      }
+      for(let x=0;x<W;x+=colW){
+        g.fillStyle='rgba(255,255,255,.13)'; g.fillRect(x,0,1,H);
+        g.fillStyle='rgba(0,0,0,.18)'; g.fillRect(x+colW-1,0,1,H);
+      }
+
+      // 窓。枠、青反射、室内の暗さ、たまに点灯を描き分ける
+      for(let y=marginY;y<H-rowH/2;y+=rowH){
+        for(let x=marginX;x<W-colW/2;x+=colW){
+          const lit = rnd() < .075;
+          const dark = rnd() < .12;
+          const ww = Math.max(5, colW - marginX*2);
+          const wh = Math.max(6, rowH - marginY*2);
+
+          g.fillStyle = 'rgba(20,24,28,.42)';
+          g.fillRect(x-1,y-1,ww+2,wh+2);
+          g.fillStyle = lit ? 'rgba(255,224,138,.76)' : dark ? 'rgba(20,35,45,.72)' : glassColor;
+          g.fillRect(x,y,ww,wh);
+
+          // ガラスの縦反射と下側の影
+          g.fillStyle='rgba(255,255,255,.22)';
+          g.fillRect(x+1,y+1,Math.max(1,ww*.23),wh-2);
+          g.fillStyle='rgba(0,0,0,.20)';
+          g.fillRect(x,y+wh-2,ww,2);
+          if(style !== 'hotel'){
+            g.fillStyle='rgba(255,255,255,.12)';
+            g.fillRect(x+ww-2,y+2,1,wh-4);
+          }
+        }
+      }
+
+      // ビル全体の片側影。立体感だけテクスチャで付ける
+      const sideShade = g.createLinearGradient(0,0,W,0);
+      sideShade.addColorStop(0,'rgba(255,255,255,.10)');
+      sideShade.addColorStop(.62,'rgba(255,255,255,0)');
+      sideShade.addColorStop(1,'rgba(0,0,0,.28)');
+      g.fillStyle = sideShade;
+      g.fillRect(0,0,W,H);
     }
-    g.fillStyle='rgba(255,235,150,.34)';
-    g.fillRect(26,7,9,5);
-    const tex=new THREE.CanvasTexture(c);
-    tex.wrapS=tex.wrapT=THREE.RepeatWrapping;
+
+    // 遠景でものっぺりしない微細ノイズ。ごく薄く、容量は増やさない
+    const img = g.getImageData(0,0,W,H);
+    for(let i=0;i<img.data.length;i+=4){
+      const n = (rnd()-.5)*10;
+      img.data[i] = Math.max(0,Math.min(255,img.data[i]+n));
+      img.data[i+1] = Math.max(0,Math.min(255,img.data[i+1]+n));
+      img.data[i+2] = Math.max(0,Math.min(255,img.data[i+2]+n));
+    }
+    g.putImageData(img,0,0);
+
+    const tex = new THREE.CanvasTexture(c);
+    tex.wrapS = tex.wrapT = THREE.RepeatWrapping;
     tex.repeat.set(1,1);
-    tex.minFilter=THREE.LinearFilter;
-    tex.magFilter=THREE.LinearFilter;
-    tex.generateMipmaps=false;
+    tex.anisotropy = Math.min(8, renderer.capabilities.getMaxAnisotropy ? renderer.capabilities.getMaxAnisotropy() : 1);
+    tex.minFilter = THREE.LinearMipmapLinearFilter;
+    tex.magFilter = THREE.LinearFilter;
+    tex.generateMipmaps = true;
+    tex.needsUpdate = true;
     return tex;
   }
 
   const buildingMats = [
-    new THREE.MeshStandardMaterial({map:makeWindowTexture('#a9aaa5','#6e838e'), roughness:.84}),
-    new THREE.MeshStandardMaterial({map:makeWindowTexture('#8e8276','#53616a'), roughness:.82}),
-    new THREE.MeshStandardMaterial({map:makeWindowTexture('#b8b4aa','#758994'), roughness:.82}),
-    new THREE.MeshStandardMaterial({map:makeWindowTexture('#8f9699','#4b5d66'), roughness:.85})
+    // 添付写真のような、黒系オフィス・青ガラス・白格子・都庁風の縦窓を共有テクスチャで表現
+    new THREE.MeshStandardMaterial({map:makeWindowTexture('#4b5154','#4e7892','office'), roughness:.74, metalness:.06}),
+    new THREE.MeshStandardMaterial({map:makeWindowTexture('#24384f','#2f8ee8','glass'), roughness:.42, metalness:.12}),
+    new THREE.MeshStandardMaterial({map:makeWindowTexture('#d7dedb','#9fc8d4','office'), roughness:.70, metalness:.04}),
+    new THREE.MeshStandardMaterial({map:makeWindowTexture('#7d7770','#3f5b68','narrow'), roughness:.78, metalness:.05}),
+    new THREE.MeshStandardMaterial({map:makeWindowTexture('#b49a80','#557786','hotel'), roughness:.82, metalness:.03}),
+    new THREE.MeshStandardMaterial({map:makeWindowTexture('#5d666a','#2e6c9d','narrow'), roughness:.72, metalness:.06})
   ];
 
   // チャンク削除時に、全区間で共有しているマテリアルまでdisposeしないための印。
