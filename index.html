@@ -523,7 +523,7 @@
     // 高精細・軽量ビル外壁テクスチャ。
     // 窓をMeshで増やさず、CanvasTexture 1枚に窓・縦横フレーム・反射を描き込む。
     // 4〜6枚だけを共有するので、窓数を増やしてもビル本体は基本1メッシュのまま。
-    const W = 160, H = 256;
+    const W = 192, H = 320;
     const c = document.createElement('canvas');
     c.width = W; c.height = H;
     const g = c.getContext('2d');
@@ -575,10 +575,10 @@
       }
     } else {
       // 通常オフィス／ホテル／都庁風：外壁パネル＋窓枠を1枚絵にする
-      const colW = style === 'narrow' ? 9 : style === 'hotel' ? 12 : 16;
-      const rowH = style === 'narrow' ? 12 : style === 'hotel' ? 15 : 18;
-      const marginX = style === 'hotel' ? 3 : 4;
-      const marginY = style === 'hotel' ? 3 : 4;
+      const colW = style === 'narrow' ? 9 : style === 'hotel' ? 12 : style === 'lowrise' ? 22 : 16;
+      const rowH = style === 'narrow' ? 12 : style === 'hotel' ? 15 : style === 'lowrise' ? 26 : 18;
+      const marginX = style === 'hotel' ? 3 : style === 'lowrise' ? 5 : 4;
+      const marginY = style === 'hotel' ? 3 : style === 'lowrise' ? 5 : 4;
 
       // 外壁パネル線
       for(let y=0;y<H;y+=rowH){
@@ -612,6 +612,68 @@
             g.fillStyle='rgba(255,255,255,.12)';
             g.fillRect(x+ww-2,y+2,1,wh-4);
           }
+          if(style === 'lowrise' && rnd() < .28){
+            g.fillStyle = 'rgba(210,210,208,.36)';
+            g.fillRect(x+2,y+Math.max(2,wh*.45),ww-4,2);
+          }
+          // ガラスのムラ・ブラインド感
+          if(rnd() < .32){
+            g.fillStyle='rgba(255,255,255,.06)'; g.fillRect(x+2,y+2,ww-4,1);
+            g.fillStyle='rgba(0,0,0,.08)'; g.fillRect(x+2,y+wh-4,ww-4,1);
+          }
+        }
+      }
+
+      if(style === 'lowrise'){
+        // 低層・中層ビルの写真感：腰壁、ガラス帯、縦フィン、角のガラス
+        for(let y=rowH*2; y<H; y+=rowH*3){
+          g.fillStyle = 'rgba(36,40,44,.10)'; g.fillRect(0,y,W,Math.max(2,rowH*.18));
+          g.fillStyle = 'rgba(255,255,255,.06)'; g.fillRect(0,y+1,W,1);
+        }
+        for(let x=marginX+2; x<W; x+=colW){
+          if(rnd() < .62){
+            g.fillStyle = 'rgba(96,86,74,.22)'; g.fillRect(x+Math.max(2,colW*.16),0,2,H);
+            g.fillStyle = 'rgba(255,255,255,.06)'; g.fillRect(x+Math.max(2,colW*.16)+2,0,1,H);
+          }
+        }
+        g.fillStyle = 'rgba(120,150,178,.20)'; g.fillRect(W-18,0,16,H);
+        g.fillStyle = 'rgba(255,255,255,.18)'; g.fillRect(W-16,0,2,H);
+      }
+      if(style === 'office'){
+        for(let y=rowH*4; y<H; y+=rowH*5){
+          g.fillStyle = 'rgba(28,32,38,.12)'; g.fillRect(0,y,W,Math.max(2,rowH*.20));
+        }
+      }
+
+      // 写真寄りの壁面表現：設備階帯・外壁の縦リブ・汚れ筋・反射ムラ
+      if(style !== 'hotel'){
+        for(let y=rowH*3; y<H; y+=rowH*(3 + Math.floor(rnd()*3))){
+          g.fillStyle = 'rgba(38,44,50,.10)'; g.fillRect(0,y,W,Math.max(2,rowH*.28));
+          g.fillStyle = 'rgba(255,255,255,.06)'; g.fillRect(0,y,W,1);
+        }
+      }
+      for(let x=6; x<W; x+=10 + Math.floor(rnd()*8)){
+        g.fillStyle = rnd()<.45 ? 'rgba(255,255,255,.04)' : 'rgba(0,0,0,.05)';
+        g.fillRect(x,0,1 + Math.floor(rnd()*2),H);
+      }
+      for(let i=0;i<10;i++){
+        const sx = 4 + rnd()*(W-8);
+        const sy = 8 + rnd()*(H-36);
+        const len = 18 + rnd()*46;
+        const stain = g.createLinearGradient(0,sy,0,sy+len);
+        stain.addColorStop(0,'rgba(84,80,72,0)');
+        stain.addColorStop(.35,'rgba(84,80,72,.08)');
+        stain.addColorStop(1,'rgba(84,80,72,0)');
+        g.fillStyle = stain; g.fillRect(sx,sy,1+rnd()*2,len);
+      }
+      if(style === 'glass' || style === 'office'){
+        for(let i=0;i<6;i++){
+          const rx = rnd()*W, ry = rnd()*H;
+          const grd = g.createLinearGradient(rx-18,ry-18,rx+20,ry+20);
+          grd.addColorStop(0,'rgba(255,255,255,0)');
+          grd.addColorStop(.5,'rgba(255,255,255,.10)');
+          grd.addColorStop(1,'rgba(255,255,255,0)');
+          g.fillStyle = grd; g.fillRect(rx-20,ry-20,44,44);
         }
       }
 
@@ -637,7 +699,7 @@
     const tex = new THREE.CanvasTexture(c);
     tex.wrapS = tex.wrapT = THREE.RepeatWrapping;
     tex.repeat.set(1,1);
-    tex.anisotropy = Math.min(8, renderer.capabilities.getMaxAnisotropy ? renderer.capabilities.getMaxAnisotropy() : 1);
+    tex.anisotropy = Math.min(4, renderer.capabilities.getMaxAnisotropy ? renderer.capabilities.getMaxAnisotropy() : 1);
     tex.minFilter = THREE.LinearMipmapLinearFilter;
     tex.magFilter = THREE.LinearFilter;
     tex.generateMipmaps = true;
@@ -653,6 +715,11 @@
     new THREE.MeshStandardMaterial({map:makeWindowTexture('#7d7770','#3f5b68','narrow'), roughness:.78, metalness:.05}),
     new THREE.MeshStandardMaterial({map:makeWindowTexture('#b49a80','#557786','hotel'), roughness:.82, metalness:.03}),
     new THREE.MeshStandardMaterial({map:makeWindowTexture('#5d666a','#2e6c9d','narrow'), roughness:.72, metalness:.06})
+  ];
+  const lowRiseBuildingMats = [
+    new THREE.MeshStandardMaterial({map:makeWindowTexture('#a7afb3','#9eb3be','lowrise'), roughness:.78, metalness:.03}),
+    new THREE.MeshStandardMaterial({map:makeWindowTexture('#7d8488','#7690a3','lowrise'), roughness:.76, metalness:.04}),
+    new THREE.MeshStandardMaterial({map:makeWindowTexture('#c8cecf','#9caebb','lowrise'), roughness:.74, metalness:.03})
   ];
 
 
@@ -735,6 +802,24 @@
         g.fillRect(x,y,Math.max(1,ww*.25),wh);
       }
     }
+    // 写真寄りに見えるよう、設備階帯・汚れ筋・屋上機器の影を少し足す
+    for(let y=rowH*4; y<H; y+=rowH*(4 + Math.floor(rnd()*2))){
+      g.fillStyle = isBlue ? 'rgba(10,30,58,.18)' : 'rgba(38,42,44,.10)';
+      g.fillRect(0,y,W,Math.max(2,rowH*.25));
+      g.fillStyle = 'rgba(255,255,255,.05)'; g.fillRect(0,y,W,1);
+    }
+    for(let i=0;i<7;i++){
+      const sx = 4 + rnd()*(W-8);
+      const sy = 10 + rnd()*(H-44);
+      const len = 18 + rnd()*42;
+      const stain = g.createLinearGradient(0,sy,0,sy+len);
+      stain.addColorStop(0,'rgba(70,70,68,0)');
+      stain.addColorStop(.35,'rgba(70,70,68,.07)');
+      stain.addColorStop(1,'rgba(70,70,68,0)');
+      g.fillStyle = stain; g.fillRect(sx,sy,1+rnd()*2,len);
+    }
+    g.fillStyle = 'rgba(36,42,46,.18)';
+    for(let i=0;i<4;i++) g.fillRect(10 + i*24 + rnd()*6, 6 + rnd()*4, 10 + rnd()*8, 4 + rnd()*3);
 
     // 遠景用の空気遠近。遠くのビル写真のように少し霞ませる。
     const haze = g.createLinearGradient(0,0,W,H);
@@ -754,7 +839,7 @@
     const tex = new THREE.CanvasTexture(c);
     tex.wrapS = tex.wrapT = THREE.RepeatWrapping;
     tex.repeat.set(1,1);
-    tex.anisotropy = Math.min(8, renderer.capabilities.getMaxAnisotropy ? renderer.capabilities.getMaxAnisotropy() : 1);
+    tex.anisotropy = Math.min(4, renderer.capabilities.getMaxAnisotropy ? renderer.capabilities.getMaxAnisotropy() : 1);
     tex.minFilter = THREE.LinearMipmapLinearFilter;
     tex.magFilter = THREE.LinearFilter;
     tex.generateMipmaps = true;
@@ -838,6 +923,31 @@
           }
         }
       }
+      // 道路テクスチャの描き分け：車線、補修跡、継ぎ目、停止線、路肩汚れ
+      g.fillStyle = 'rgba(255,255,255,.28)';
+      for(let y=44;y<H;y+=106) g.fillRect(roadX+roadW*.49,y,5,34);
+      g.fillStyle = 'rgba(255,255,255,.24)';
+      for(let y=180;y<H;y+=420){
+        g.fillRect(roadX+roadW*.14,y,roadW*.24,8);
+        g.fillRect(roadX+roadW*.62,y+14,roadW*.18,6);
+      }
+      for(let i=0;i<18;i++){
+        const py = 24 + rnd()*(H-90);
+        const px = roadX + 8 + rnd()*(roadW-32);
+        const pw = 16 + rnd()*48;
+        const ph = 8 + rnd()*18;
+        g.fillStyle = 'rgba(56,60,62,.24)'; g.fillRect(px,py,pw,ph);
+        g.strokeStyle = 'rgba(98,102,104,.36)'; g.strokeRect(px+.5,py+.5,pw-1,ph-1);
+      }
+      for(let y=0;y<H;y+=88){
+        g.fillStyle = 'rgba(0,0,0,.10)'; g.fillRect(roadX,y,roadW,2);
+      }
+      const shoulder = g.createLinearGradient(roadX-20,0,roadX+roadW+20,0);
+      shoulder.addColorStop(0,'rgba(76,64,50,.22)');
+      shoulder.addColorStop(.20,'rgba(0,0,0,0)');
+      shoulder.addColorStop(.80,'rgba(0,0,0,0)');
+      shoulder.addColorStop(1,'rgba(76,64,50,.22)');
+      g.fillStyle = shoulder; g.fillRect(roadX-20,0,roadW+40,H);
       for(let i=0;i<5;i++){
         const y = 140 + i*(H/5) + rnd()*60;
         g.fillStyle = i%2===0 ? concrete : '#b6b8b6';
@@ -910,6 +1020,27 @@
       groundShadow.addColorStop(1,'rgba(0,0,0,.18)');
       g.fillStyle = groundShadow;
       g.fillRect(0,H-86,W,70);
+
+      // 高架橋下面のテクスチャ：梁の継ぎ目、汚れ、配線影
+      if(isElev){
+        g.fillStyle = 'rgba(36,40,44,.92)'; g.fillRect(0,40,W,22);
+        g.fillStyle = 'rgba(18,20,22,.82)'; g.fillRect(0,62,W,12);
+        g.fillStyle = 'rgba(255,255,255,.08)'; g.fillRect(0,40,W,2);
+        for(let bx=26; bx<W; bx+=92){
+          g.fillStyle = 'rgba(84,88,92,.78)'; g.fillRect(bx,44,18,14);
+          g.fillStyle = 'rgba(210,214,216,.35)';
+          [[bx+3,48],[bx+15,48],[bx+3,55],[bx+15,55]].forEach(([px,py])=>{ g.beginPath(); g.arc(px,py,1.3,0,Math.PI*2); g.fill(); });
+        }
+        for(let i=0;i<18;i++){
+          const sx = 12 + rnd()*(W-24);
+          g.fillStyle = 'rgba(0,0,0,.16)'; g.fillRect(sx,54,2+rnd()*2,18+rnd()*28);
+        }
+        g.strokeStyle = 'rgba(22,24,26,.56)'; g.lineWidth = 2;
+        for(let wy=0; wy<3; wy++){
+          const yy = 70 + wy*6;
+          g.beginPath(); g.moveTo(0,yy); g.lineTo(W,yy); g.stroke();
+        }
+      }
 
       let x = -8;
       let idx = 0;
@@ -985,6 +1116,21 @@
         g.strokeStyle = 'rgba(0,0,0,.40)';
         g.lineWidth = 1.2;
         g.strokeRect(x+.5,y+roofD+.5,bw-1,bh-roofD-1);
+        // ビル壁面テクスチャの詳細リアリティ：縦リブ、壁の汚れ、反射ムラ
+        if(rnd()<.62){
+          g.fillStyle = 'rgba(255,255,255,.08)';
+          for(let sx=x+6; sx<x+bw-6; sx+=12+rnd()*8) g.fillRect(sx,y+roofD+4,1,bh-roofD-8);
+        }
+        for(let i=0;i<8;i++){
+          const sx = x + 4 + rnd()*(bw-8);
+          const sy = y + roofD + 6 + rnd()*(bh-roofD-18);
+          const len = 8 + rnd()*28;
+          const stain = g.createLinearGradient(0,sy,0,sy+len);
+          stain.addColorStop(0,'rgba(80,76,70,0)');
+          stain.addColorStop(.35,'rgba(80,76,70,.10)');
+          stain.addColorStop(1,'rgba(80,76,70,0)');
+          g.fillStyle = stain; g.fillRect(sx,sy,2,len);
+        }
 
         // 縦の角影・ハイライト。
         const edgeShade = g.createLinearGradient(x,0,x+bw,0);
@@ -1096,7 +1242,7 @@
     tex.wrapS = THREE.RepeatWrapping;
     tex.wrapT = THREE.ClampToEdgeWrapping;
     tex.repeat.set(isEdge ? 1.15 : 1, 1);
-    tex.anisotropy = Math.min(8, renderer.capabilities.getMaxAnisotropy ? renderer.capabilities.getMaxAnisotropy() : 1);
+    tex.anisotropy = Math.min(4, renderer.capabilities.getMaxAnisotropy ? renderer.capabilities.getMaxAnisotropy() : 1);
     tex.minFilter = THREE.LinearMipmapLinearFilter;
     tex.magFilter = THREE.LinearFilter;
     tex.generateMipmaps = true;
@@ -1126,6 +1272,7 @@
   Object.values(mat).forEach(markSharedMaterial);
   buildingMats.forEach(markSharedMaterial);
   farBuildingMats.forEach(markSharedMaterial);
+  lowRiseBuildingMats.forEach(markSharedMaterial);
   Object.values(urbanInfillMats).forEach(markSharedMaterial);
 
   const world = new THREE.Group();
@@ -1267,7 +1414,7 @@
     const tex = new THREE.CanvasTexture(c);
     tex.wrapS = tex.wrapT = THREE.RepeatWrapping;
     tex.repeat.set(1,1);
-    tex.anisotropy = Math.min(8, renderer.capabilities.getMaxAnisotropy ? renderer.capabilities.getMaxAnisotropy() : 1);
+    tex.anisotropy = Math.min(4, renderer.capabilities.getMaxAnisotropy ? renderer.capabilities.getMaxAnisotropy() : 1);
     tex.minFilter = THREE.LinearMipmapLinearFilter;
     tex.magFilter = THREE.LinearFilter;
     tex.generateMipmaps = true;
@@ -1307,7 +1454,7 @@
     const tex = new THREE.CanvasTexture(c);
     tex.wrapS = tex.wrapT = THREE.RepeatWrapping;
     tex.repeat.set(1,1);
-    tex.anisotropy = Math.min(8, renderer.capabilities.getMaxAnisotropy ? renderer.capabilities.getMaxAnisotropy() : 1);
+    tex.anisotropy = Math.min(4, renderer.capabilities.getMaxAnisotropy ? renderer.capabilities.getMaxAnisotropy() : 1);
     tex.minFilter = THREE.LinearMipmapLinearFilter;
     tex.magFilter = THREE.LinearFilter;
     tex.generateMipmaps = true;
@@ -1494,6 +1641,41 @@
         for(let j=1;j<4;j++) g.fillRect(wx+6+j*23,320,2,124);
         for(let j=1;j<3;j++) g.fillRect(wx+4,320+j*40,96,2);
       }
+    } else if(style==='storehouseFront'){
+      const base = g.createLinearGradient(0,0,0,c.height);
+      base.addColorStop(0,'#dbd8d1'); base.addColorStop(.68,'#c8c3ba'); base.addColorStop(1,'#b2aa9e');
+      g.fillStyle = base; g.fillRect(0,0,c.width,c.height);
+      for(let i=0;i<9;i++){
+        const x = 56 + i*102;
+        g.fillStyle = '#6b6358'; g.fillRect(x,0,14,c.height);
+      }
+      g.fillStyle = '#796a58'; g.fillRect(0,206,c.width,34);
+      for(let i=0;i<4;i++){
+        const wx = 118 + i*198;
+        g.fillStyle = '#ece8df'; g.fillRect(wx,150,128,210);
+        g.strokeStyle = '#84796b'; g.lineWidth = 4; g.strokeRect(wx,150,128,210);
+        g.fillStyle = 'rgba(92,86,74,.24)'; g.fillRect(wx+58,150,8,210);
+        g.fillStyle = 'rgba(255,255,255,.20)'; g.fillRect(wx+8,160,20,178);
+      }
+      g.fillStyle = '#54463a'; g.fillRect(444,146,134,250);
+      g.fillStyle = '#665648'; g.fillRect(698,170,118,226);
+    } else if(style==='plasterFront'){
+      const base = g.createLinearGradient(0,0,0,c.height);
+      base.addColorStop(0,'#e7dfd1'); base.addColorStop(.7,'#d1c6b3'); base.addColorStop(1,'#c1b39d');
+      g.fillStyle = base; g.fillRect(0,0,c.width,c.height);
+      for(let i=0;i<8;i++){
+        const x = 74 + i*112;
+        g.fillStyle = '#7a5a43'; g.fillRect(x,18,16,c.height-18);
+      }
+      for(let i=0;i<6;i++){
+        const wx = 46 + i*158;
+        g.fillStyle = '#f1ece3'; g.fillRect(wx,186,110,168);
+        g.strokeStyle = '#8d7861'; g.lineWidth = 4; g.strokeRect(wx,186,110,168);
+        for(let j=1;j<4;j++) g.fillRect(wx+8+j*24,190,2,160);
+        for(let j=1;j<3;j++) g.fillRect(wx+6,190+j*52,98,2);
+      }
+      g.fillStyle = '#6d4a34'; g.fillRect(754,152,130,244);
+      g.fillStyle = '#9e8b74'; g.fillRect(0,238,c.width,44);
     } else {
       // 日本の古民家正面
       const base = g.createLinearGradient(0,0,0,c.height);
@@ -1516,12 +1698,38 @@
       g.fillStyle = 'rgba(255,255,255,.26)'; g.fillRect(774,176,64,168);
     }
 
+    // 和風・農家風の細部をテクスチャで追加（窓枠、雨戸、木目、壁の汚れ）
+    if(style !== 'stoneFront'){
+      // 木目
+      for(let i=0;i<120;i++){
+        const x = Math.random()*c.width;
+        const y = Math.random()*c.height;
+        g.fillStyle = 'rgba(90,66,45,.05)';
+        g.fillRect(x, y, 1, 10+Math.random()*18);
+      }
+      // 雨戸っぽい縦格子
+      for(let i=0;i<5;i++){
+        const sx = 54 + i*170;
+        g.fillStyle = 'rgba(104,84,62,.28)';
+        g.fillRect(sx,184,18,166);
+        g.fillRect(sx+104,184,18,166);
+        g.fillStyle = 'rgba(255,255,255,.06)';
+        g.fillRect(sx+2,186,2,160);
+      }
+    }
+    // 腰壁付近の汚れ
+    const dirt = g.createLinearGradient(0,c.height*.62,0,c.height);
+    dirt.addColorStop(0,'rgba(92,78,60,0)');
+    dirt.addColorStop(.45,'rgba(92,78,60,.08)');
+    dirt.addColorStop(1,'rgba(74,62,48,.18)');
+    g.fillStyle = dirt; g.fillRect(0,c.height*.60,c.width,c.height*.40);
+
     // 上部の汚れ・影
     const shade = g.createLinearGradient(0,0,0,c.height);
     shade.addColorStop(0,'rgba(0,0,0,.14)'); shade.addColorStop(.3,'rgba(0,0,0,0)'); shade.addColorStop(1,'rgba(0,0,0,.10)');
     g.fillStyle = shade; g.fillRect(0,0,c.width,c.height);
     const tex = new THREE.CanvasTexture(c);
-    tex.anisotropy = Math.min(8, renderer.capabilities.getMaxAnisotropy ? renderer.capabilities.getMaxAnisotropy() : 1);
+    tex.anisotropy = Math.min(4, renderer.capabilities.getMaxAnisotropy ? renderer.capabilities.getMaxAnisotropy() : 1);
     tex.minFilter = THREE.LinearMipmapLinearFilter; tex.magFilter = THREE.LinearFilter; tex.generateMipmaps = true;
     tex.userData.sharedTexture = true; tex.needsUpdate = true;
     return tex;
@@ -1541,11 +1749,21 @@
         g.moveTo(x,y+8); g.quadraticCurveTo(x+12,y-4,x+24,y+8); g.lineTo(x+24,y+16); g.lineTo(x,y+16); g.closePath();
         g.fill();
         g.strokeStyle = 'rgba(0,0,0,.18)'; g.lineWidth = 1.5; g.stroke();
+        g.fillStyle = 'rgba(255,255,255,.10)'; g.fillRect(x+4,y+4,14,2);
+        g.fillStyle = 'rgba(0,0,0,.12)'; g.fillRect(x+2,y+15,20,2);
       }
       g.fillStyle = 'rgba(0,0,0,.16)'; g.fillRect(0,y+16,c.width,3);
+      g.fillStyle = 'rgba(255,255,255,.04)'; g.fillRect(0,y+2,c.width,1);
+    }
+    // 瓦の段差感・汚れ
+    for(let i=0;i<140;i++){
+      const x = Math.random()*c.width;
+      const y = Math.random()*c.height;
+      g.fillStyle = 'rgba(255,255,255,.03)'; g.fillRect(x,y,2+Math.random()*4,1);
+      g.fillStyle = 'rgba(0,0,0,.05)'; g.fillRect(x,y+1,2+Math.random()*4,1);
     }
     const tex = new THREE.CanvasTexture(c);
-    tex.anisotropy = Math.min(8, renderer.capabilities.getMaxAnisotropy ? renderer.capabilities.getMaxAnisotropy() : 1);
+    tex.anisotropy = Math.min(4, renderer.capabilities.getMaxAnisotropy ? renderer.capabilities.getMaxAnisotropy() : 1);
     tex.minFilter = THREE.LinearMipmapLinearFilter; tex.magFilter = THREE.LinearFilter; tex.generateMipmaps = true;
     tex.userData.sharedTexture = true; tex.needsUpdate = true;
     return tex;
@@ -1557,12 +1775,15 @@
       japanFront: new THREE.MeshStandardMaterial({map:makeRuralHouseWallTexture('japanFront'), roughness:.94}),
       minkaFront: new THREE.MeshStandardMaterial({map:makeRuralHouseWallTexture('minkaFront'), roughness:.94}),
       stoneFront: new THREE.MeshStandardMaterial({map:makeRuralHouseWallTexture('stoneFront'), roughness:.94}),
+      storehouseFront: new THREE.MeshStandardMaterial({map:makeRuralHouseWallTexture('storehouseFront'), roughness:.94}),
+      plasterFront: new THREE.MeshStandardMaterial({map:makeRuralHouseWallTexture('plasterFront'), roughness:.94}),
       japanRoof: new THREE.MeshStandardMaterial({map:makeRuralHouseRoofTexture('tile'), roughness:.82, metalness:.02}),
       slateRoof: new THREE.MeshStandardMaterial({map:makeRuralHouseRoofTexture('slate'), roughness:.84, metalness:.02}),
       wood: new THREE.MeshStandardMaterial({color:0x5c4332, roughness:.9}),
       stone: new THREE.MeshStandardMaterial({color:0x8a7e70, roughness:.96}),
       wallSide: new THREE.MeshStandardMaterial({color:0xcfc3b0, roughness:.94}),
       darkWallSide: new THREE.MeshStandardMaterial({color:0xb6a48d, roughness:.94}),
+      lightWallSide: new THREE.MeshStandardMaterial({color:0xd9d1c3, roughness:.94}),
       hedge: new THREE.MeshStandardMaterial({color:0x325b25, roughness:.98})
     };
     Object.values(ruralHouseMats).forEach(markSharedMaterial);
@@ -1573,13 +1794,15 @@
     const mats = getRuralHouseMats();
     const baseX = side * (8.8 + Math.random()*7.6);
     const baseZ = z + (Math.random()-.5)*18;
-    const styleKey = Math.random() < .20 ? 'stone' : (Math.random() < .55 ? 'minka' : 'japan');
-    const w = (4.8 + Math.random()*2.8) * scale;
-    const h = (1.85 + Math.random()*.70) * scale;
-    const d = (4.8 + Math.random()*3.0) * scale;
-    const bodyFrontMat = styleKey === 'stone' ? mats.stoneFront : (styleKey === 'minka' ? mats.minkaFront : mats.japanFront);
-    const sideWallMat = styleKey === 'stone' ? mats.darkWallSide : mats.wallSide;
-    const roofMat = styleKey === 'stone' ? mats.slateRoof : mats.japanRoof;
+    const styleRoll = Math.random();
+    const styleKey = styleRoll < .16 ? 'stone' : styleRoll < .36 ? 'minka' : styleRoll < .58 ? 'storehouse' : styleRoll < .78 ? 'plaster' : 'japan';
+    const w = (4.4 + Math.random()*3.4) * scale;
+    const h = (1.75 + Math.random()*.92) * scale;
+    const d = (4.4 + Math.random()*3.6) * scale;
+    const bodyFrontMat = styleKey === 'stone' ? mats.stoneFront : (styleKey === 'minka' ? mats.minkaFront : (styleKey === 'storehouse' ? mats.storehouseFront : (styleKey === 'plaster' ? mats.plasterFront : mats.japanFront)));
+    const sideWallMat = styleKey === 'stone' ? mats.darkWallSide : (styleKey === 'storehouse' ? mats.lightWallSide : mats.wallSide);
+    const roofMat = (styleKey === 'stone' || styleKey === 'storehouse') ? mats.slateRoof : mats.japanRoof;
+    const roofType = Math.random() < .34 ? 'low' : (Math.random() < .55 ? 'steep' : 'normal');
 
     const house = new THREE.Group();
     const bodyGeo = new THREE.BoxGeometry(w,h,d);
@@ -1595,14 +1818,17 @@
     house.add(foundation);
 
     // テクスチャ主体の瓦屋根。2枚の傾斜板で軽く表現
-    const roofL = new THREE.Mesh(new THREE.BoxGeometry(w*1.20,.16,d*.70), roofMat);
-    roofL.position.set(0,h+.62*scale,-d*.16); roofL.rotation.x = -.42;
+    const roofPitch = roofType === 'steep' ? .56 : roofType === 'low' ? .28 : .42;
+    const roofRise = roofType === 'steep' ? .78 : roofType === 'low' ? .48 : .62;
+    const roofDepth = roofType === 'steep' ? .66 : roofType === 'low' ? .76 : .70;
+    const roofL = new THREE.Mesh(new THREE.BoxGeometry(w*1.20,.16,d*roofDepth), roofMat);
+    roofL.position.set(0,h+roofRise*scale,-d*.16); roofL.rotation.x = -roofPitch;
     roofL.castShadow = true; house.add(roofL);
-    const roofR = new THREE.Mesh(new THREE.BoxGeometry(w*1.20,.16,d*.70), roofMat);
-    roofR.position.set(0,h+.62*scale,d*.16); roofR.rotation.x = .42;
+    const roofR = new THREE.Mesh(new THREE.BoxGeometry(w*1.20,.16,d*roofDepth), roofMat);
+    roofR.position.set(0,h+roofRise*scale,d*.16); roofR.rotation.x = roofPitch;
     roofR.castShadow = true; house.add(roofR);
     const ridge = new THREE.Mesh(new THREE.BoxGeometry(w*.18,.18,d*1.12), roofMat);
-    ridge.position.set(0,h+.86*scale,0); house.add(ridge);
+    ridge.position.set(0,h+(roofType === 'steep' ? 1.00 : roofType === 'low' ? .68 : .86)*scale,0); house.add(ridge);
     const eave = new THREE.Mesh(new THREE.BoxGeometry(w*1.08,.10,.44), mats.wood);
     eave.position.set(0,h+.08*scale,-d*.60); house.add(eave);
 
@@ -1619,6 +1845,16 @@
       const shedRoof = new THREE.Mesh(new THREE.BoxGeometry(w*.42,.10,d*.50), roofMat);
       shedRoof.position.set(-w*.34,h*.66,d*.30); shedRoof.rotation.x = .22; house.add(shedRoof);
     }
+    if(Math.random()<.22){
+      const frontShed = new THREE.Mesh(new THREE.BoxGeometry(w*.28,h*.34,d*.26), sideWallMat);
+      frontShed.position.set(w*.22,.24+h*.17,-d*.52); house.add(frontShed);
+      const frontShedRoof = new THREE.Mesh(new THREE.BoxGeometry(w*.34,.08,d*.34), roofMat);
+      frontShedRoof.position.set(w*.22,h*.50,-d*.52); frontShedRoof.rotation.x = -.18; house.add(frontShedRoof);
+    }
+    if(Math.random()<.18){
+      const chimney = new THREE.Mesh(new THREE.BoxGeometry(w*.10,h*.24,d*.10), mats.stone);
+      chimney.position.set(-w*.12,h+.84*scale,d*.10); house.add(chimney);
+    }
 
     house.position.set(baseX, 0.0, baseZ);
     house.rotation.y = side*(.03 + Math.random()*.08);
@@ -1632,24 +1868,110 @@
     }
   }
 
+  function addModernRuralHouse(side, z, scale=1){
+    const mats = getRuralHouseMats();
+    const baseX = side * (8.6 + Math.random()*7.2);
+    const baseZ = z + (Math.random()-.5)*18;
+    const w = (4.8 + Math.random()*2.8) * scale;
+    const h = (1.9 + Math.random()*.65) * scale;
+    const d = (4.8 + Math.random()*2.6) * scale;
+    const roofMat = mats.slateRoof;
+
+    const house = new THREE.Group();
+    const body = new THREE.Mesh(new THREE.BoxGeometry(w,h,d), [mats.lightWallSide, mats.lightWallSide, mats.lightWallSide, mats.stone, mats.plasterFront, mats.lightWallSide]);
+    body.position.y = h/2 + .24;
+    body.castShadow = true; body.receiveShadow = true;
+    house.add(body);
+
+    const foundation = new THREE.Mesh(new THREE.BoxGeometry(w*1.02,.28,d*1.03), mats.stone);
+    foundation.position.y = .13; house.add(foundation);
+    const roofL = new THREE.Mesh(new THREE.BoxGeometry(w*1.06,.14,d*.62), roofMat);
+    roofL.position.set(0,h+.54*scale,-d*.16); roofL.rotation.x = -.30; house.add(roofL);
+    const roofR = new THREE.Mesh(new THREE.BoxGeometry(w*1.06,.14,d*.62), roofMat);
+    roofR.position.set(0,h+.54*scale,d*.16); roofR.rotation.x = .30; house.add(roofR);
+    const ridge = new THREE.Mesh(new THREE.BoxGeometry(w*.14,.12,d*.96), roofMat);
+    ridge.position.set(0,h+.70*scale,0); house.add(ridge);
+    const porch = new THREE.Mesh(new THREE.BoxGeometry(w*.34,.08,.34), mats.wood);
+    porch.position.set(0,.20,-d*.68); house.add(porch);
+    if(Math.random()<.56){
+      const annex = new THREE.Mesh(new THREE.BoxGeometry(w*.34,h*.52,d*.44), mats.lightWallSide);
+      annex.position.set(-w*.28,.22+h*.26,d*.18); house.add(annex);
+      const annexRoof = new THREE.Mesh(new THREE.BoxGeometry(w*.42,.10,d*.52), roofMat);
+      annexRoof.position.set(-w*.28,h*.60,d*.18); annexRoof.rotation.x = .16; house.add(annexRoof);
+    }
+    house.position.set(baseX, 0, baseZ);
+    house.rotation.y = side*(.03 + Math.random()*.08);
+    world.add(house);
+    if(Math.random()<.70){
+      const lowWall = new THREE.Mesh(new THREE.BoxGeometry(w*.74,.22,.10), mats.stone);
+      lowWall.position.set(baseX, .12, baseZ-d*.88); world.add(lowWall);
+    }
+  }
+
+  function addRuralStationBuilding(side, z, scale=1){
+    const mats = getRuralHouseMats();
+    const baseX = side * (9.0 + Math.random()*6.8);
+    const baseZ = z + (Math.random()-.5)*16;
+    const w = (5.8 + Math.random()*1.8) * scale;
+    const h = (2.1 + Math.random()*.35) * scale;
+    const d = (4.6 + Math.random()*1.6) * scale;
+    const grp = new THREE.Group();
+    const body = new THREE.Mesh(new THREE.BoxGeometry(w,h,d), [mats.wallSide,mats.wallSide,mats.wallSide,mats.stone,mats.storehouseFront,mats.wallSide]);
+    body.position.y = h/2 + .22; body.castShadow=true; body.receiveShadow=true; grp.add(body);
+    const roof = new THREE.Mesh(new THREE.BoxGeometry(w*1.14,.16,d*1.10), mats.slateRoof);
+    roof.position.set(0,h+.38,0); grp.add(roof);
+    const canopy = new THREE.Mesh(new THREE.BoxGeometry(w*.42,.08,.70), mats.slateRoof);
+    canopy.position.set(0,h*.62,-d*.66); canopy.rotation.x = -.06; grp.add(canopy);
+    grp.position.set(baseX,0,baseZ); grp.rotation.y = side*(.02+Math.random()*.06); world.add(grp);
+    const sign = new THREE.Mesh(new THREE.BoxGeometry(w*.44,.20,.08), new THREE.MeshBasicMaterial({color:0xf2f1e7}));
+    sign.position.set(baseX,h*.92+ .22,baseZ-d*.56); world.add(sign);
+    const platform = new THREE.Mesh(new THREE.BoxGeometry(w*.70,.08,.68), mats.stone);
+    platform.position.set(baseX,.08,baseZ-d*.70); world.add(platform);
+  }
+
   function addRiceField(side,z,wide=false){
     const fieldMat = new THREE.MeshStandardMaterial({color:wide?0x6b8f3a:0x5f8134, roughness:.96});
+    const soilMat = new THREE.MeshStandardMaterial({color:0x7e6e54, roughness:.96});
+    const gravelMat = new THREE.MeshStandardMaterial({color:0x918676, roughness:.97});
     // 水田でも青く見えすぎないよう、少し土色を混ぜた反射色にする
     const waterMat = new THREE.MeshStandardMaterial({color:0x79846d, roughness:.62, metalness:.02});
     const x = side*(10.5 + Math.random()*8.0);
     const zz = z + (Math.random()-.5)*24;
     const w = (wide?9:5) + Math.random()*6;
     const d = (wide?16:9) + Math.random()*12;
-    const field = new THREE.Mesh(new THREE.BoxGeometry(w,.035,d), Math.random()<.10 ? waterMat : fieldMat);
+    const useWater = Math.random()<.12;
+    const field = new THREE.Mesh(new THREE.BoxGeometry(w,.035,d), useWater ? waterMat : fieldMat);
     field.position.set(x,.025,zz);
     field.rotation.y = side*(Math.random()*.08);
     world.add(field);
-    const furrowMat = new THREE.MeshBasicMaterial({color:0x2f4e25});
+    const bundMat = new THREE.MeshStandardMaterial({color:0x55703a, roughness:.98});
+    const bundA = new THREE.Mesh(new THREE.BoxGeometry(w+.28,.05,.18), bundMat);
+    bundA.position.set(x,.05,zz-d*.50); bundA.rotation.y = field.rotation.y; world.add(bundA);
+    const bundB = new THREE.Mesh(new THREE.BoxGeometry(w+.28,.05,.18), bundMat);
+    bundB.position.set(x,.05,zz+d*.50); bundB.rotation.y = field.rotation.y; world.add(bundB);
+    const bundC = new THREE.Mesh(new THREE.BoxGeometry(.18,.05,d+.24), bundMat);
+    bundC.position.set(x-w*.50,.05,zz); bundC.rotation.y = field.rotation.y; world.add(bundC);
+    const bundD = new THREE.Mesh(new THREE.BoxGeometry(.18,.05,d+.24), bundMat);
+    bundD.position.set(x+w*.50,.05,zz); bundD.rotation.y = field.rotation.y; world.add(bundD);
+    const furrowMat = new THREE.MeshBasicMaterial({color:useWater?0x5d6758:0x2f4e25});
     for(let i=-3;i<=3;i++){
       const f = new THREE.Mesh(new THREE.BoxGeometry(.045,.04,d*.92), furrowMat);
       f.position.set(x+i*w/7,.055,zz);
       f.rotation.y = field.rotation.y;
       world.add(f);
+    }
+    if(Math.random()<.74){
+      const path = new THREE.Mesh(new THREE.BoxGeometry(1.3 + Math.random()*1.0,.035,d*.92), Math.random()<.45 ? soilMat : gravelMat);
+      path.position.set(x+side*(w*.62 + .8), .03, zz);
+      path.rotation.y = field.rotation.y; world.add(path);
+    }
+    if(Math.random()<.68){
+      const channel = new THREE.Mesh(new THREE.BoxGeometry(.44,.03,d*.96), waterMat);
+      channel.position.set(x-side*(w*.66 + 1.25), .022, zz);
+      channel.rotation.y = field.rotation.y; world.add(channel);
+      const channelEdge = new THREE.Mesh(new THREE.BoxGeometry(.66,.02,d*.98), soilMat);
+      channelEdge.position.set(x-side*(w*.66 + 1.25), .012, zz);
+      channelEdge.rotation.y = field.rotation.y; world.add(channelEdge);
     }
   }
 
@@ -1678,8 +2000,11 @@
   function addBuilding(side, z, zone){
     if(zone==='rural' || zone==='mountain'){
       // 田舎は箱型ビルではなく、昔風の民家＋畑＋木の多い景色にする
-      if(Math.random()<.72) addOldRuralHouse(side,z, zone==='mountain' ? .88 : 1.0);
-      if(Math.random()<.92) addRiceField(side,z, zone==='mountain');
+      const roll = Math.random();
+      if(roll < .42) addOldRuralHouse(side,z, zone==='mountain' ? .88 : 1.0);
+      else if(roll < .60) addModernRuralHouse(side,z, zone==='mountain' ? .84 : .96);
+      else if(roll < .72) addRuralStationBuilding(side,z, zone==='mountain' ? .82 : .92);
+      if(Math.random()<.94) addRiceField(side,z, zone==='mountain');
       addRuralTreeMass(side,z, zone==='mountain' ? 7 : 5);
       if(Math.random()<.65) addRuralUtilityPole(side,z+(Math.random()-.5)*20);
       return;
@@ -1762,7 +2087,7 @@
     });
 
     // 葉群の面を大量に描き込んで密度を上げる。
-    for(let i=0;i<4200;i++){
+    for(let i=0;i<6200;i++){
       const cluster = blobs[Math.floor(rnd()*blobs.length)];
       const x = cluster[0] + (rnd()-.5)*cluster[2]*1.6;
       const y = cluster[1] + (rnd()-.5)*cluster[3]*1.6;
@@ -1791,7 +2116,7 @@
     }
 
     // 斑点状の濃い群葉でふさふさ感を追加。
-    for(let i=0;i<340;i++){
+    for(let i=0;i<520;i++){
       const cluster = blobs[Math.floor(rnd()*blobs.length)];
       const x = cluster[0] + (rnd()-.5)*cluster[2]*1.2;
       const y = cluster[1] + (rnd()-.5)*cluster[3]*1.2;
@@ -1806,6 +2131,24 @@
       g.beginPath();
       g.ellipse(x,y,rx,ry,rnd()*Math.PI,0,Math.PI*2);
       g.fill();
+    }
+
+    // 外周の細かな葉縁を追加して、丸い板感を減らす。
+    for(let i=0;i<420;i++){
+      const ang = rnd()*Math.PI*2;
+      const rr = 118 + rnd()*78;
+      const x = W*.50 + Math.cos(ang)*rr*.64 + (rnd()-.5)*8;
+      const y = H*.58 + Math.sin(ang)*rr*.48 + (rnd()-.5)*10;
+      const len = 4 + rnd()*8;
+      g.save();
+      g.translate(x,y);
+      g.rotate(ang + (rnd()-.5)*.8);
+      g.globalAlpha = .12 + rnd()*.18;
+      g.fillStyle = pal[Math.floor(rnd()*pal.length)];
+      g.beginPath();
+      g.ellipse(0,0,len*(.9+rnd()*.3),len*(.16+rnd()*.16),0,0,Math.PI*2);
+      g.fill();
+      g.restore();
     }
 
     // 枝影をうっすら焼き込み、のっぺり感を減らす。
@@ -1842,7 +2185,7 @@
     g.globalCompositeOperation = 'source-over';
 
     const tex = new THREE.CanvasTexture(c);
-    tex.anisotropy = Math.min(8, renderer.capabilities.getMaxAnisotropy ? renderer.capabilities.getMaxAnisotropy() : 1);
+    tex.anisotropy = Math.min(4, renderer.capabilities.getMaxAnisotropy ? renderer.capabilities.getMaxAnisotropy() : 1);
     tex.minFilter = THREE.LinearMipmapLinearFilter;
     tex.magFilter = THREE.LinearFilter;
     tex.generateMipmaps = true;
@@ -1920,10 +2263,15 @@
 
   function addRealisticTree(x,z,scale=1,side=1,type='urban'){
     const isRural = type === 'rural';
+    const species = isRural
+      ? (Math.random()<.70 ? 'ruralRound' : 'ruralTall')
+      : (Math.random()<.26 ? 'round' : Math.random()<.50 ? 'columnar' : Math.random()<.76 ? 'broadleaf' : 'ginkgo');
     const baseY = 0;
-    const h = (isRural ? 5.2 + Math.random()*1.3 : 4.7 + Math.random()*0.9) * scale;
+    const h = (isRural
+      ? (species==='ruralTall' ? 5.8 + Math.random()*1.4 : 5.2 + Math.random()*1.3)
+      : (species==='columnar' ? 5.4 + Math.random()*1.0 : species==='broadleaf' ? 4.4 + Math.random()*0.8 : species==='ginkgo' ? 5.0 + Math.random()*0.9 : 4.8 + Math.random()*0.9)) * scale;
     const lean = side * (.03 + Math.random()*.06) * scale;
-    const trunkTop = [x + lean, baseY + h*(isRural ? .70 : .72), z + (Math.random()-.5)*.12];
+    const trunkTop = [x + lean, baseY + h*(isRural ? .70 : (species==='columnar' ? .77 : species==='ginkgo' ? .74 : .72)), z + (Math.random()-.5)*.12];
 
     cylBetween([x,baseY+.05,z], trunkTop, .18*scale, treeMats.trunk, 10);
     cylBetween([x+.03*side,baseY+.14,z+.015], [trunkTop[0]+.025*side,trunkTop[1],trunkTop[2]], .072*scale, treeMats.barkDark, 8);
@@ -1944,12 +2292,12 @@
       branchStarts.push(end);
     }
 
-    const crownCenterY = baseY + h*(isRural ? .70 : .74);
-    const crownW = ((isRural?3.55:3.25) + Math.random()*(isRural ? .62 : .36)) * scale;
-    const crownH = ((isRural?4.10:3.55) + Math.random()*(isRural ? .55 : .34)) * scale;
-    const matMain = isRural ? treeMats.leafBillboardRural : (Math.random()<.24 ? treeMats.leafBillboardBright : treeMats.leafBillboardDeep);
-    const matSub  = isRural ? (Math.random()<.25 ? treeMats.leafBillboardDeep : treeMats.leafBillboardRural) : (Math.random()<.58 ? treeMats.leafBillboardBright : treeMats.leafBillboardDeep);
-    const matAccent = isRural ? treeMats.leafBillboardRural : (Math.random()<.18 ? treeMats.leafBillboardBright : treeMats.leafBillboardDeep);
+    const crownCenterY = baseY + h*(isRural ? .70 : (species==='columnar' ? .76 : species==='ginkgo' ? .75 : .74));
+    const crownW = ((isRural ? (species==='ruralTall' ? 2.8 : 3.55) : (species==='columnar' ? 2.05 : species==='broadleaf' ? 4.2 : species==='ginkgo' ? 2.7 : 3.25)) + Math.random()*(isRural ? .62 : .42)) * scale;
+    const crownH = ((isRural ? (species==='ruralTall' ? 4.8 : 4.10) : (species==='columnar' ? 4.8 : species==='broadleaf' ? 3.1 : species==='ginkgo' ? 4.2 : 3.55)) + Math.random()*(isRural ? .55 : .42)) * scale;
+    const matMain = isRural ? treeMats.leafBillboardRural : (species==='ginkgo' ? treeMats.leafBillboardBright : (Math.random()<.24 ? treeMats.leafBillboardBright : treeMats.leafBillboardDeep));
+    const matSub  = isRural ? (Math.random()<.25 ? treeMats.leafBillboardDeep : treeMats.leafBillboardRural) : (species==='ginkgo' ? treeMats.leafBillboardBright : (Math.random()<.58 ? treeMats.leafBillboardBright : treeMats.leafBillboardDeep));
+    const matAccent = isRural ? treeMats.leafBillboardRural : (species==='ginkgo' ? treeMats.leafBillboardBright : (Math.random()<.18 ? treeMats.leafBillboardBright : treeMats.leafBillboardDeep));
 
     const boards = isRural ? [
       [ 0.00,  0.06,  0.00, 1.00, 1.06,  Math.PI/2,                    matMain,   0.00],
@@ -1964,6 +2312,33 @@
       [ 0.60*side,-0.12, 0.00, 0.58, 0.76,  Math.PI/2 - Math.PI/2.7,  matAccent, 0.03],
       [ 0.00,  0.42,  0.00, 0.74, 0.82,  Math.PI/2 + Math.PI/4,       matMain,   0.00],
       [ 0.00,  0.64,  0.00, 0.56, 0.62,  Math.PI/2 - Math.PI/4,       matSub,    0.00]
+    ] : (species==='columnar' ? [
+      [ 0.00,  0.18,  0.00, 0.72, 1.10, Math.PI/2,                    matMain,   0.00],
+      [ 0.00, -0.04,  0.00, 0.78, 1.02, Math.PI/2 + Math.PI/3,       matSub,    0.01],
+      [ 0.00, -0.06,  0.00, 0.76, 0.96, Math.PI/2 - Math.PI/3,       matMain,  -0.01],
+      [ 0.00, -0.34,  0.00, 0.86, 0.82, Math.PI/2 + Math.PI/2,       matSub,    0.00],
+      [ 0.00,  0.52,  0.00, 0.52, 0.66, Math.PI/2 + Math.PI/4,       matMain,   0.00],
+      [-0.22*side,-0.18, 0.04, 0.46, 0.74, Math.PI/2 + Math.PI/5,    matAccent, -0.02],
+      [ 0.22*side,-0.18,-0.04, 0.46, 0.74, Math.PI/2 - Math.PI/5,    matAccent,  0.02]
+    ] : species==='broadleaf' ? [
+      [ 0.00,  0.00,  0.00, 1.16, 0.96, Math.PI/2,                    matMain,   0.00],
+      [-0.46*side,0.04, 0.12, 0.90, 0.82, Math.PI/2 + Math.PI/6,      matSub,   -0.03],
+      [ 0.46*side,0.04,-0.12, 0.90, 0.82, Math.PI/2 - Math.PI/6,      matSub,    0.03],
+      [ 0.00,  0.24,  0.00, 0.86, 0.70, Math.PI/2 + Math.PI/3,        matMain,   0.00],
+      [ 0.00, -0.26,  0.00, 1.06, 0.76, Math.PI/2 - Math.PI/3,        matAccent, 0.00],
+      [-0.66*side,-0.04,0.00,0.64,0.62, Math.PI/2 + Math.PI/2.6,      matAccent,-0.02],
+      [ 0.66*side,-0.04,0.00,0.64,0.62, Math.PI/2 - Math.PI/2.6,      matAccent, 0.02],
+      [ 0.00,  0.40, 0.04, 0.78, 0.62, Math.PI/2 + Math.PI/5,          matMain,   0.00],
+      [ 0.00, -0.36,-0.02, 0.80, 0.64, Math.PI/2 - Math.PI/5,          matSub,    0.00]
+    ] : species==='ginkgo' ? [
+      [ 0.00,  0.18,  0.00, 0.86, 1.02, Math.PI/2,                    matMain,   0.00],
+      [ 0.00,  0.34,  0.00, 0.62, 0.78, Math.PI/2 + Math.PI/3,        matSub,    0.00],
+      [ 0.00, -0.02,  0.00, 0.98, 0.88, Math.PI/2 - Math.PI/3,        matMain,   0.00],
+      [-0.36*side,-0.16,0.10, 0.74, 0.74, Math.PI/2 + Math.PI/7,      matAccent,-0.03],
+      [ 0.36*side,-0.16,-0.10,0.74, 0.74, Math.PI/2 - Math.PI/7,      matAccent, 0.03],
+      [ 0.00, -0.42,  0.00, 0.84, 0.62, Math.PI/2 + Math.PI/2,        matSub,    0.00],
+      [ 0.00,  0.52,  0.00, 0.68, 0.66, Math.PI/2 + Math.PI/5,         matMain,   0.00],
+      [ 0.00, -0.28,  0.14, 0.70, 0.62, Math.PI/2 - Math.PI/6,         matAccent, 0.00]
     ] : [
       [ 0.00,  0.10,  0.00, 1.02, 1.02,  Math.PI/2,                    matMain,   0.00],
       [ 0.00,  0.14,  0.00, 0.98, 0.98,  Math.PI/2 + Math.PI/3,       matSub,    0.01],
@@ -1979,8 +2354,9 @@
       [ 0.18*side,-0.48, -0.18, 0.66, 0.84,  Math.PI/2 - Math.PI/8,   matMain,   0.05],
       [ 0.00, -0.56,  0.00, 0.72, 0.92,  Math.PI/2 + Math.PI/2,       matSub,    0.00],
       [-0.54*side,-0.12,  0.00, 0.58, 0.66,  Math.PI/2 + Math.PI/2.5, matAccent, -0.03],
-      [ 0.54*side,-0.12,  0.00, 0.58, 0.66,  Math.PI/2 - Math.PI/2.5, matAccent,  0.03]
-    ];
+      [ 0.54*side,-0.12,  0.00, 0.58, 0.66,  Math.PI/2 - Math.PI/2.5, matAccent,  0.03],
+      [ 0.00,  0.06,  0.18, 0.74, 0.70,  Math.PI/2 + Math.PI/7,       matMain,   0.00]
+    ]);
     boards.forEach(b=>{
       addLeafBillboard(
         trunkTop[0] + b[0]*scale,
@@ -1993,9 +2369,10 @@
     });
 
     const coreMats = isRural ? [treeMats.ruralLeafCoreA, treeMats.ruralLeafCoreB, treeMats.ruralLeafCoreC] : [treeMats.leafCoreA, treeMats.leafCoreB, treeMats.leafCoreC];
-    for(let i=0;i<(isRural?10:7);i++){
-      const angle = (i/(isRural?10:7))*Math.PI*2 + Math.random()*.18;
-      const radius = (.20 + Math.random()*(isRural ? .58 : .42)) * scale;
+    const coreCount = isRural ? 11 : (species==='columnar' ? 5 : species==='broadleaf' ? 9 : species==='ginkgo' ? 7 : 8);
+    for(let i=0;i<coreCount;i++){
+      const angle = (i/coreCount)*Math.PI*2 + Math.random()*.18;
+      const radius = (.20 + Math.random()*(isRural ? .58 : (species==='broadleaf' ? .58 : species==='columnar' ? .22 : .42))) * scale;
       const lx = trunkTop[0] + Math.cos(angle)*radius*.72;
       const ly = crownCenterY - .18*scale + Math.sin(i*1.1)*.18*scale + Math.random()*.22*scale;
       const lz = trunkTop[2] + Math.sin(angle)*radius*.58;
@@ -2003,6 +2380,7 @@
     }
     branchStarts.forEach((b,i)=>{
       addLeafCore(b[0], b[1]+(.01+Math.random()*.06)*scale, b[2], (.12+Math.random()*.05)*scale, coreMats[(i+1)%coreMats.length]);
+      if(!isRural && i < 4) addLeafCore(b[0] + (Math.random()-.5)*.10*scale, b[1]+(.08+Math.random()*.08)*scale, b[2] + (Math.random()-.5)*.10*scale, (.10+Math.random()*.04)*scale, coreMats[(i+2)%coreMats.length]);
       if(i < (isRural?6:5)){
         addLeafCore((b[0]+trunkTop[0])*.5,(b[1]+crownCenterY)*.5 - .12*scale,(b[2]+trunkTop[2])*.5,(.11+Math.random()*.04)*scale,coreMats[(i+2)%coreMats.length]);
       }
@@ -2026,29 +2404,47 @@
       const grassMat = new THREE.MeshStandardMaterial({color:0x4f7a34,roughness:.96});
       const meadowMat = new THREE.MeshStandardMaterial({color:zone==='mountain' ? 0x6b8256 : 0x78925b, roughness:.98});
       const earthMat = new THREE.MeshStandardMaterial({color:0x8a7b63,roughness:.95});
+      const gravelMat = new THREE.MeshStandardMaterial({color:0x918677, roughness:.97});
       const bank = new THREE.Mesh(new THREE.BoxGeometry(1.8,.22,34), grassMat);
       bank.position.set(side*4.8,.05,z); bank.rotation.z = side*.035; world.add(bank);
       const ditch = new THREE.Mesh(new THREE.BoxGeometry(.48,.035,34), new THREE.MeshStandardMaterial({color:0x66735f,roughness:.92}));
       ditch.position.set(side*6.2,.035,z); world.add(ditch);
 
       // 線路脇から遠方まで草地を敷き、背景色の水色抜けを減らす
-      const meadowNear = new THREE.Mesh(new THREE.BoxGeometry(4.6,.03,34), meadowMat);
+      const meadowNear = new THREE.Mesh(new THREE.BoxGeometry(4.8,.03,34), meadowMat);
       meadowNear.position.set(side*8.8,.018,z);
       meadowNear.rotation.z = side*.012;
       world.add(meadowNear);
-      const meadowFar = new THREE.Mesh(new THREE.BoxGeometry(8.5,.028,34), meadowMat);
-      meadowFar.position.set(side*15.2,.016,z);
+      const meadowFar = new THREE.Mesh(new THREE.BoxGeometry(10.5,.028,34), meadowMat);
+      meadowFar.position.set(side*16.0,.016,z);
       meadowFar.rotation.z = side*.008;
       world.add(meadowFar);
+      const farmStrip = new THREE.Mesh(new THREE.BoxGeometry(5.8,.022,34), new THREE.MeshStandardMaterial({color:0x758553,roughness:.98}));
+      farmStrip.position.set(side*22.2,.014,z);
+      farmStrip.rotation.z = side*.006;
+      world.add(farmStrip);
 
-      if(Math.random()<.55){
-        const path = new THREE.Mesh(new THREE.BoxGeometry(2.6,.035,34), earthMat);
+      if(Math.random()<.75){
+        const path = new THREE.Mesh(new THREE.BoxGeometry(2.8,.035,34), Math.random()<.48 ? earthMat : gravelMat);
         path.position.set(side*(7.3+Math.random()*1.4),.025,z); world.add(path);
+      }
+      if(Math.random()<.58){
+        const serviceRoad = new THREE.Mesh(new THREE.BoxGeometry(1.8,.03,34), gravelMat);
+        serviceRoad.position.set(side*11.6,.02,z); serviceRoad.rotation.z = side*.01; world.add(serviceRoad);
+      }
+      if(Math.random()<.64){
+        const irrigation = new THREE.Mesh(new THREE.BoxGeometry(.58,.024,34), new THREE.MeshStandardMaterial({color:0x71806f, roughness:.72}));
+        irrigation.position.set(side*13.7,.015,z); world.add(irrigation);
       }
       for(let i=0;i<7;i++){
         const weed = new THREE.Mesh(new THREE.BoxGeometry(.18+Math.random()*.35,.08+Math.random()*.25,.45+Math.random()*.9), grassMat);
         weed.position.set(side*(3.1+Math.random()*3.5),.09,z-16+Math.random()*32);
         world.add(weed);
+      }
+      for(let i=0;i<4;i++){
+        const furrow = new THREE.Mesh(new THREE.BoxGeometry(.08,.03,32), new THREE.MeshBasicMaterial({color:0x496232}));
+        furrow.position.set(side*(19.0 + i*1.1), .03, z);
+        world.add(furrow);
       }
       return;
     }
@@ -2064,15 +2460,21 @@
     const hasNearBuildings = (zone==='town' || zone==='city' || zone==='suburb' || zone==='residential' || zone==='elevated');
     const groundKey = urbanKind + 'Ground';
     const edgeKey = urbanKind + 'Edge';
-    const fillW = urbanKind==='city' ? 22.0 : urbanKind==='elevated' ? 18.5 : 16.8;
-    const fillX = side*(10.6 + fillW*0.5);
+    const fillW = urbanKind==='city' ? 24.5 : urbanKind==='elevated' ? 20.5 : 18.4;
+    const fillX = side*(9.8 + fillW*0.5);
     const fill = new THREE.Mesh(new THREE.BoxGeometry(fillW,.03,34), urbanInfillMats[groundKey]);
     fill.position.set(fillX,.018,z); fill.receiveShadow = false; world.add(fill);
+    const fillNear = new THREE.Mesh(new THREE.BoxGeometry(5.6,.026,34), urbanInfillMats[groundKey]);
+    fillNear.position.set(side*5.7,.017,z);
+    fillNear.receiveShadow = false; world.add(fillNear);
     if(urbanKind==='city' || urbanKind==='elevated' || urbanKind==='residential'){
-      const fillFarW = urbanKind==='city' ? 10.5 : 8.5;
+      const fillFarW = urbanKind==='city' ? 14.5 : 10.5;
       const fillFar = new THREE.Mesh(new THREE.BoxGeometry(fillFarW,.025,34), urbanInfillMats[groundKey]);
       fillFar.position.set(side*(22.5 + fillFarW*0.5), .016, z);
       fillFar.receiveShadow = false; world.add(fillFar);
+      const fillFar2 = new THREE.Mesh(new THREE.BoxGeometry(8.0,.022,34), urbanInfillMats[groundKey]);
+      fillFar2.position.set(side*31.5, .015, z);
+      fillFar2.receiveShadow = false; world.add(fillFar2);
     }
     if(!hasNearBuildings){
       const edgeH = urbanKind==='city' ? 6.8 : urbanKind==='elevated' ? 6.0 : 5.5;
@@ -2224,7 +2626,7 @@
     tex.wrapS = THREE.RepeatWrapping;
     tex.wrapT = THREE.ClampToEdgeWrapping;
     tex.repeat.set(1,1);
-    tex.anisotropy = Math.min(8, renderer.capabilities.getMaxAnisotropy ? renderer.capabilities.getMaxAnisotropy() : 1);
+    tex.anisotropy = Math.min(4, renderer.capabilities.getMaxAnisotropy ? renderer.capabilities.getMaxAnisotropy() : 1);
     tex.userData.sharedTexture = true;
     tex.needsUpdate = true;
     return tex;
@@ -2299,19 +2701,28 @@
       // 街中の遠景ビル：箱メッシュはそのまま、窓・横ライン・霞はCanvasTextureで表現。
       // 窓の3D Meshは追加しないため、見た目の密度を上げても描画負荷を抑える。
       [-1,1].forEach(side=>{
-        // ビル群の足元に灰色の道路・舗装帯を敷き、隙間から空色が見えないようにする
-        const roadMatNear = new THREE.MeshStandardMaterial({color:0x83888b, roughness:.96});
-        const roadMatFar = new THREE.MeshStandardMaterial({color:0x6c7276, roughness:.96});
-        const apronNear = new THREE.Mesh(new THREE.BoxGeometry(13.0,.03,164), roadMatNear);
-        apronNear.position.set(side*25.0,.016,z+2);
+        // ビル群の足元に灰色のテクスチャ地面・舗装帯を敷き、隙間から空色が見えないようにする
+        const pavementKey = zone==='elevated' ? 'elevatedGround' : (zone==='suburb' || zone==='residential' ? 'residentialGround' : 'cityGround');
+        const pavementMat = urbanInfillMats[pavementKey];
+        const apronNear = new THREE.Mesh(new THREE.BoxGeometry(28.0,.03,196), pavementMat);
+        apronNear.position.set(side*18.2,.016,z+2);
         apronNear.rotation.z = side*.008;
         apronNear.receiveShadow = false;
         world.add(apronNear);
-        const apronFar = new THREE.Mesh(new THREE.BoxGeometry(16.0,.028,176), roadMatFar);
-        apronFar.position.set(side*39.5,.014,z+4);
+        const apronFar = new THREE.Mesh(new THREE.BoxGeometry(24.0,.028,196), pavementMat);
+        apronFar.position.set(side*38.5,.014,z+4);
         apronFar.rotation.z = side*.006;
         apronFar.receiveShadow = false;
         world.add(apronFar);
+        const apronMid = new THREE.Mesh(new THREE.BoxGeometry(13.0,.026,164), pavementMat);
+        apronMid.position.set(side*10.8,.015,z-1);
+        apronMid.rotation.z = side*.010;
+        apronMid.receiveShadow = false;
+        world.add(apronMid);
+        const apronNearLine = new THREE.Mesh(new THREE.BoxGeometry(8.0,.024,154), pavementMat);
+        apronNearLine.position.set(side*5.2,.014,z+3);
+        apronNearLine.receiveShadow = false;
+        world.add(apronNearLine);
 
         for(let i=0;i<5;i++){
           const w = 8 + Math.random()*12;
@@ -2326,6 +2737,30 @@
           b.castShadow = false;
           b.receiveShadow = false;
           world.add(b);
+        }
+
+        // 低層の箱ビルは少し減らし、手前は避けつつ遠めに配置する
+        for(let i=0;i<3;i++){
+          const w = 5.2 + Math.random()*5.8;
+          const h = 5.0 + Math.random()*6.8;
+          const d = 7.2 + Math.random()*6.8;
+          const low = new THREE.Mesh(new THREE.BoxGeometry(w,h,d), lowRiseBuildingMats[(i + (side>0?1:0)) % lowRiseBuildingMats.length]);
+          low.position.set(side*(22.0 + i*8.2 + Math.random()*3.2), h/2 - .15, z - 56 + i*38 + Math.random()*18);
+          low.rotation.y = side*(.03 + Math.random()*.04);
+          low.castShadow = false;
+          low.receiveShadow = false;
+          world.add(low);
+        }
+        for(let i=0;i<1;i++){
+          const w = 4.0 + Math.random()*2.8;
+          const h = 3.2 + Math.random()*3.4;
+          const d = 4.4 + Math.random()*4.0;
+          const micro = new THREE.Mesh(new THREE.BoxGeometry(w,h,d), lowRiseBuildingMats[(i + 1 + (side>0?1:0)) % lowRiseBuildingMats.length]);
+          micro.position.set(side*(18.0 + Math.random()*2.4), h/2 - .12, z - 22 + Math.random()*54);
+          micro.rotation.y = side*(.02 + Math.random()*.05);
+          micro.castShadow = false;
+          micro.receiveShadow = false;
+          world.add(micro);
         }
       });
       return;
@@ -2445,7 +2880,7 @@
 
 
   function makeStationTexture(kind='platformLocal'){
-    const W = 256, H = 1024;
+    const W = 320, H = 1280;
     const c = document.createElement('canvas');
     c.width = W; c.height = H;
     const g = c.getContext('2d');
@@ -2493,29 +2928,52 @@
       g.fillStyle = bg;
       g.fillRect(0,0,W,H);
 
-      const tileW = isTerminal ? 42 : 32;
-      const tileH = isSubway ? 58 : 44;
+      const tileW = isTerminal ? 46 : 36;
+      const tileH = isSubway ? 62 : 48;
       for(let y=0;y<H;y+=tileH){
         for(let x=0;x<W;x+=tileW){
-          g.fillStyle = `rgba(255,255,255,${0.04 + rnd()*0.06})`;
+          g.fillStyle = `rgba(255,255,255,${0.03 + rnd()*0.07})`;
           g.fillRect(x,y,tileW-2,tileH-2);
           g.strokeStyle = 'rgba(0,0,0,.12)';
           g.strokeRect(x+.5,y+.5,tileW-1,tileH-1);
+          if(rnd() < .22){
+            g.fillStyle = 'rgba(0,0,0,.05)';
+            g.fillRect(x+3,y+3,tileW-8,tileH-10);
+          }
         }
       }
-      g.fillStyle = 'rgba(60,60,60,.58)';
-      g.fillRect(W*.38,0,W*.24,H);
-      g.fillStyle = 'rgba(245,220,78,.92)';
-      g.fillRect(18,0,26,H);
+      // 線路側の濃い影と床面の反射ムラ
+      const edgeShade = g.createLinearGradient(W*.28,0,W*.82,0);
+      edgeShade.addColorStop(0,'rgba(0,0,0,0)');
+      edgeShade.addColorStop(.65,'rgba(0,0,0,.16)');
+      edgeShade.addColorStop(1,'rgba(0,0,0,.28)');
+      g.fillStyle = edgeShade; g.fillRect(0,0,W,H);
+      g.fillStyle = 'rgba(60,60,60,.64)';
+      g.fillRect(W*.40,0,W*.22,H);
+      g.fillStyle = 'rgba(245,220,78,.94)';
+      g.fillRect(18,0,28,H);
       for(let y=6;y<H;y+=22){
-        for(let x=20;x<42;x+=9){
+        for(let x=20;x<44;x+=9){
           g.beginPath();
           g.arc(x,y,2.4,0,Math.PI*2);
           g.fill();
         }
       }
-      g.fillStyle = 'rgba(248,248,242,.84)';
-      g.fillRect(50,0,8,H);
+      // 白線と内側の警戒線
+      g.fillStyle = 'rgba(248,248,242,.88)';
+      g.fillRect(52,0,8,H);
+      g.fillStyle = 'rgba(238,196,78,.56)';
+      g.fillRect(64,0,3,H);
+      // 排水溝と床の目地
+      for(let y=20;y<H;y+=138){
+        g.fillStyle = 'rgba(96,98,96,.32)'; g.fillRect(W*.08,y,W*.22,4);
+        for(let x=W*.09;x<W*.29;x+=8){ g.fillStyle='rgba(62,62,62,.32)'; g.fillRect(x,y,2,4); }
+      }
+      // 床番号・案内マーキング風
+      for(let y=120;y<H;y+=260){
+        g.fillStyle = 'rgba(230,205,96,.62)'; g.fillRect(W*.10,y,22,34);
+        g.fillStyle = 'rgba(90,90,90,.45)'; g.fillRect(W*.105,y+5,12,3); g.fillRect(W*.105,y+13,12,3);
+      }
 
       // ホーム上に、さらに本数を増やした柱列と待客シルエットを軽量なテクスチャとして焼き込む
       const pillarXs = [W*.40, W*.50, W*.60, W*.70, W*.80, W*.90];
@@ -2528,17 +2986,61 @@
           g.fillRect(px-pw/2+2, y, 3, 70);
           g.fillStyle = 'rgba(0,0,0,.18)';
           g.fillRect(px-pw/2-11, y+65, pw+22, 8);
+          // 柱脚プレートとボルト表現
+          g.fillStyle = 'rgba(78,82,86,.88)';
+          g.fillRect(px-pw/2-6, y+58, pw+12, 10);
+          g.fillStyle = 'rgba(210,214,218,.65)';
+          [[-4,60],[pw+1,60],[-4,66],[pw+1,66]].forEach(([ox,oy])=>{
+            g.beginPath(); g.arc(px-pw/2+ox, y+oy, 1.5, 0, Math.PI*2); g.fill();
+          });
         });
       }
+      // ホーム床の伸縮目地・排水目地・汚れを追加
+      for(let y=18;y<H;y+=118){
+        g.fillStyle = 'rgba(255,255,255,.06)'; g.fillRect(0,y,W,1);
+        g.fillStyle = 'rgba(0,0,0,.18)'; g.fillRect(0,y+1,W,2);
+      }
+      for(let y=46;y<H;y+=136){
+        g.fillStyle = 'rgba(88,88,82,.22)';
+        g.fillRect(W*.10, y, W*.24, 3);
+        g.fillRect(W*.64, y+5, W*.18, 3);
+      }
+      for(let i=0;i<18;i++){
+        const sy = 20 + i*54 + rnd()*8;
+        const stain = g.createLinearGradient(0,sy,0,sy+24);
+        stain.addColorStop(0,'rgba(70,66,58,0)');
+        stain.addColorStop(.45,'rgba(70,66,58,.10)');
+        stain.addColorStop(1,'rgba(70,66,58,0)');
+        g.fillStyle = stain;
+        g.fillRect(W*.05 + rnd()*W*.20, sy, W*.18 + rnd()*W*.10, 20 + rnd()*10);
+      }
       for(let y=20;y<H-16;y+=82){
+        drawPassengerSilhouette(W*.26 + (rnd()-.5)*10, y+18, .92 + rnd()*.16, rnd()<.35 ? 'rgba(62,68,82,.84)' : 'rgba(68,58,52,.84)');
         drawPassengerSilhouette(W*.34 + (rnd()-.5)*10, y+12, 1.02 + rnd()*.18, rnd()<.35 ? 'rgba(62,68,82,.86)' : 'rgba(68,58,52,.86)');
+        drawPassengerSilhouette(W*.40 + (rnd()-.5)*9, y+28, .90 + rnd()*.14, 'rgba(60,60,64,.82)');
         drawPassengerSilhouette(W*.46 + (rnd()-.5)*11, y+30, .98 + rnd()*.16, rnd()<.45 ? 'rgba(48,48,50,.84)' : 'rgba(70,62,56,.84)');
+        drawPassengerSilhouette(W*.52 + (rnd()-.5)*9, y+18, .86 + rnd()*.12, 'rgba(82,70,60,.80)');
         drawPassengerSilhouette(W*.58 + (rnd()-.5)*12, y+16, .94 + rnd()*.15, 'rgba(52,52,56,.82)');
+        if(rnd() < .96) drawPassengerSilhouette(W*.66 + (rnd()-.5)*10, y+26, .84 + rnd()*.12, 'rgba(66,60,58,.80)');
         if(rnd() < .92) drawPassengerSilhouette(W*.70 + (rnd()-.5)*12, y+34, .88 + rnd()*.14, 'rgba(78,66,58,.80)');
+        if(rnd() < .84) drawPassengerSilhouette(W*.76 + (rnd()-.5)*10, y+14, .82 + rnd()*.12, 'rgba(56,56,60,.80)');
         if(rnd() < .76) drawPassengerSilhouette(W*.82 + (rnd()-.5)*10, y+20, .82 + rnd()*.13, 'rgba(56,56,60,.80)');
       }
+      // ホームドア・機器箱・案内サインをテクスチャへ焼き込み
+      for(let y=38;y<H;y+=110){
+        g.fillStyle = 'rgba(230,232,228,.92)'; g.fillRect(W*.62,y,W*.28,54);
+        g.fillStyle = 'rgba(45,104,182,.72)'; g.fillRect(W*.64,y+16,W*.18,8);
+        g.fillStyle = 'rgba(60,66,72,.34)'; g.fillRect(W*.65,y+30,W*.12,14);
+        g.strokeStyle = 'rgba(0,0,0,.18)'; g.strokeRect(W*.62+.5,y+.5,W*.28-1,54-1);
+        g.fillStyle = 'rgba(240,224,120,.36)'; g.fillRect(W*.60,y+50,W*.32,4);
+      }
+      for(let y=26;y<H;y+=180){
+        g.fillStyle = 'rgba(246,214,78,.95)'; g.fillRect(W*.30,y,54,18);
+        g.fillStyle = 'rgba(28,28,28,.75)'; g.fillRect(W*.34,y+5,22,5);
+        g.fillRect(W*.58,y+12,36,7);
+      }
 
-      for(let i=0;i<420;i++){
+      for(let i=0;i<520;i++){
         const x = rnd()*W, y = rnd()*H, a = rnd()*0.06;
         g.fillStyle = `rgba(0,0,0,${a})`;
         g.fillRect(x,y,1+rnd()*2,1+rnd()*2);
@@ -2565,6 +3067,14 @@
         g.fillStyle = 'rgba(255,255,255,.14)'; g.fillRect(x+10,0,2,H);
         g.fillStyle = 'rgba(0,0,0,.22)'; g.fillRect(x+42,0,1,H);
       }
+      // ケーブルトレイ・配管・吊り金具
+      for(let y=16;y<H;y+=124){
+        g.fillStyle = 'rgba(36,40,44,.72)'; g.fillRect(8,y,W-16,6);
+        g.strokeStyle = 'rgba(18,20,22,.55)'; g.lineWidth = 1.4;
+        for(let x=14;x<W-14;x+=22){ g.beginPath(); g.moveTo(x,y); g.lineTo(x,y+10); g.stroke(); }
+        g.fillStyle = 'rgba(210,210,206,.42)'; g.fillRect(22,y+8,W*.62,2);
+        for(let x=36;x<W-24;x+=64){ g.fillStyle = 'rgba(24,24,28,.42)'; g.fillRect(x,y+10,2,18); }
+      }
       // 屋根を支える柱をさらに増やし、駅全体の密度感を上げる
       const roofPillarXs = [10, 46, 82, 118, 154, 190, 226];
       for(let y=0;y<H;y+= isTerminal ? 106 : 86){
@@ -2573,7 +3083,27 @@
           g.fillStyle = 'rgba(22,26,30,.95)'; g.fillRect(px, y, pw, 112);
           g.fillStyle = 'rgba(255,255,255,.16)'; g.fillRect(px+2, y, 3, 112);
           g.fillStyle = 'rgba(0,0,0,.20)'; g.fillRect(px-11, y+102, pw+24, 8);
+          // 梁の継ぎ目プレートとボルト列
+          const plateY = y + 20;
+          g.fillStyle = 'rgba(72,78,84,.92)';
+          g.fillRect(px-5, plateY, pw+10, 16);
+          g.fillRect(px-4, plateY+52, pw+8, 14);
+          g.fillStyle = 'rgba(205,210,214,.64)';
+          [[px-1,plateY+4],[px+pw+1,plateY+4],[px-1,plateY+12],[px+pw+1,plateY+12],[px,plateY+56],[px+pw,plateY+56]].forEach(([bx,by])=>{
+            g.beginPath(); g.arc(bx, by, 1.6, 0, Math.PI*2); g.fill();
+          });
         });
+      }
+      // 梁下の汚れ・流れ跡
+      for(let i=0;i<26;i++){
+        const x = 6 + rnd()*(W-18);
+        const y = 10 + rnd()*(H-90);
+        const len = 24 + rnd()*46;
+        const stain = g.createLinearGradient(0,y,0,y+len);
+        stain.addColorStop(0,'rgba(20,22,26,0)');
+        stain.addColorStop(.35,'rgba(20,22,26,.12)');
+        stain.addColorStop(1,'rgba(20,22,26,0)');
+        g.fillStyle = stain; g.fillRect(x,y,2+rnd()*2,len);
       }
       // 焼き込み案内板
       for(let i=0;i<5;i++){
@@ -2618,7 +3148,29 @@
           g.fillStyle = 'rgba(72,74,76,.88)'; g.fillRect(px, y, 18, 98);
           g.fillStyle = 'rgba(255,255,255,.15)'; g.fillRect(px+2, y, 3, 98);
           g.fillStyle = 'rgba(0,0,0,.14)'; g.fillRect(px-8, y+92, 34, 6);
+          g.fillStyle = 'rgba(80,84,88,.88)'; g.fillRect(px-4, y+74, 26, 10);
+          g.fillStyle = 'rgba(212,216,220,.58)';
+          [[px-1,y+77],[px+19,y+77],[px-1,y+82],[px+19,y+82]].forEach(([bx,by])=>{
+            g.beginPath(); g.arc(bx, by, 1.3, 0, Math.PI*2); g.fill();
+          });
         });
+      }
+      // 壁の汚れ・小案内板
+      for(let i=0;i<22;i++){
+        const sx = 10 + rnd()*(W-28);
+        const sy = 18 + rnd()*(H-110);
+        const len = 24 + rnd()*56;
+        const stain = g.createLinearGradient(0,sy,0,sy+len);
+        stain.addColorStop(0,'rgba(94,88,78,0)');
+        stain.addColorStop(.3,'rgba(94,88,78,.10)');
+        stain.addColorStop(1,'rgba(94,88,78,0)');
+        g.fillStyle = stain; g.fillRect(sx,sy,2+rnd()*2,len);
+      }
+      for(let y=44;y<H-44;y+=170){
+        g.fillStyle = 'rgba(242,244,240,.84)'; g.fillRect(18,y,52,18);
+        g.strokeStyle = 'rgba(0,0,0,.16)'; g.strokeRect(18.5,y+.5,51,17);
+        g.fillStyle = 'rgba(35,76,130,.72)'; g.fillRect(22,y+4,18,10);
+        g.fillStyle = 'rgba(0,0,0,.18)'; g.fillRect(44,y+6,20,3);
       }
       for(let y=26;y<H-16;y+=98){
         drawPassengerSilhouette(W*.18 + (rnd()-.5)*10, y+22, .92 + rnd()*.14, 'rgba(56,56,58,.82)');
@@ -2765,7 +3317,7 @@
 
     const tex = new THREE.CanvasTexture(c);
     tex.wrapS = tex.wrapT = THREE.RepeatWrapping;
-    tex.anisotropy = Math.min(8, renderer.capabilities.getMaxAnisotropy ? renderer.capabilities.getMaxAnisotropy() : 1);
+    tex.anisotropy = Math.min(4, renderer.capabilities.getMaxAnisotropy ? renderer.capabilities.getMaxAnisotropy() : 1);
     tex.minFilter = THREE.LinearMipmapLinearFilter;
     tex.magFilter = THREE.LinearFilter;
     tex.generateMipmaps = true;
@@ -2985,7 +3537,7 @@
     tex.minFilter = THREE.LinearMipmapLinearFilter;
     tex.magFilter = THREE.LinearFilter;
     tex.generateMipmaps = true;
-    tex.anisotropy = Math.min(8, renderer.capabilities.getMaxAnisotropy ? renderer.capabilities.getMaxAnisotropy() : 1);
+    tex.anisotropy = Math.min(4, renderer.capabilities.getMaxAnisotropy ? renderer.capabilities.getMaxAnisotropy() : 1);
     tex.userData.sharedTexture = true;
     tex.needsUpdate = true;
     return tex;
@@ -3113,7 +3665,7 @@
     tex.minFilter = THREE.LinearMipmapLinearFilter;
     tex.magFilter = THREE.LinearFilter;
     tex.generateMipmaps = true;
-    tex.anisotropy = Math.min(8, renderer.capabilities.getMaxAnisotropy ? renderer.capabilities.getMaxAnisotropy() : 1);
+    tex.anisotropy = Math.min(4, renderer.capabilities.getMaxAnisotropy ? renderer.capabilities.getMaxAnisotropy() : 1);
     tex.userData.sharedTexture = true;
     tex.needsUpdate = true;
     return tex;
@@ -3327,7 +3879,7 @@
     }
     const tex = new THREE.CanvasTexture(c);
     tex.minFilter = THREE.LinearMipmapLinearFilter; tex.magFilter = THREE.LinearFilter; tex.generateMipmaps = true;
-    tex.anisotropy = Math.min(8, renderer.capabilities.getMaxAnisotropy ? renderer.capabilities.getMaxAnisotropy() : 1);
+    tex.anisotropy = Math.min(4, renderer.capabilities.getMaxAnisotropy ? renderer.capabilities.getMaxAnisotropy() : 1);
     tex.userData.sharedTexture = true; tex.needsUpdate = true;
     return tex;
   }
@@ -3356,7 +3908,7 @@
     for(let x=170;x<W-170;x+=72){ g.fillStyle = 'rgba(26,9,7,.9)'; g.fillRect(x,42,14,14); }
     const tex = new THREE.CanvasTexture(c);
     tex.minFilter = THREE.LinearMipmapLinearFilter; tex.magFilter = THREE.LinearFilter; tex.generateMipmaps = true;
-    tex.anisotropy = Math.min(8, renderer.capabilities.getMaxAnisotropy ? renderer.capabilities.getMaxAnisotropy() : 1);
+    tex.anisotropy = Math.min(4, renderer.capabilities.getMaxAnisotropy ? renderer.capabilities.getMaxAnisotropy() : 1);
     tex.userData.sharedTexture = true; tex.needsUpdate = true;
     return tex;
   }
@@ -3779,7 +4331,7 @@
     tex.minFilter = THREE.LinearMipmapLinearFilter;
     tex.magFilter = THREE.LinearFilter;
     tex.generateMipmaps = true;
-    tex.anisotropy = Math.min(8, renderer.capabilities.getMaxAnisotropy ? renderer.capabilities.getMaxAnisotropy() : 1);
+    tex.anisotropy = Math.min(4, renderer.capabilities.getMaxAnisotropy ? renderer.capabilities.getMaxAnisotropy() : 1);
     tex.userData.sharedTexture = true;
     tex.needsUpdate = true;
     return tex;
@@ -3809,7 +4361,7 @@
     tex.minFilter = THREE.LinearMipmapLinearFilter;
     tex.magFilter = THREE.LinearFilter;
     tex.generateMipmaps = true;
-    tex.anisotropy = Math.min(8, renderer.capabilities.getMaxAnisotropy ? renderer.capabilities.getMaxAnisotropy() : 1);
+    tex.anisotropy = Math.min(4, renderer.capabilities.getMaxAnisotropy ? renderer.capabilities.getMaxAnisotropy() : 1);
     tex.userData.sharedTexture = true;
     tex.needsUpdate = true;
     return tex;
@@ -4229,7 +4781,7 @@
     tex.minFilter = THREE.LinearMipmapLinearFilter;
     tex.magFilter = THREE.LinearFilter;
     tex.generateMipmaps = true;
-    tex.anisotropy = Math.min(8, renderer.capabilities.getMaxAnisotropy ? renderer.capabilities.getMaxAnisotropy() : 1);
+    tex.anisotropy = Math.min(4, renderer.capabilities.getMaxAnisotropy ? renderer.capabilities.getMaxAnisotropy() : 1);
     tex.userData.sharedTexture = true;
     tex.needsUpdate = true;
     return tex;
@@ -4252,14 +4804,29 @@
     bg.addColorStop(1,'#8a8e8b');
     g.fillStyle = bg; g.fillRect(0,0,W,H);
 
+    // 上端キャップ・ガードレール影
+    g.fillStyle = 'rgba(210,214,214,.55)'; g.fillRect(0,0,W,8);
+    g.fillStyle = 'rgba(0,0,0,.18)'; g.fillRect(0,8,W,4);
+    g.fillStyle = 'rgba(0,0,0,.10)'; g.fillRect(0,18,W,8);
+
     // パネルの目地
     for(let x=52; x<W; x+=92){
       g.fillStyle = 'rgba(255,255,255,.07)'; g.fillRect(x,0,1,H);
       g.fillStyle = 'rgba(0,0,0,.13)'; g.fillRect(x+1,0,2,H);
+      // 目地プレート
+      g.fillStyle = 'rgba(132,136,134,.26)'; g.fillRect(x-2,36,6,22);
+      g.fillStyle = 'rgba(215,218,220,.38)';
+      [[x,42],[x,52],[x+2,42],[x+2,52]].forEach(([bx,by])=>{ g.beginPath(); g.arc(bx,by,1.2,0,Math.PI*2); g.fill(); });
     }
     for(let y=64; y<H; y+=60){
       g.fillStyle = 'rgba(255,255,255,.05)'; g.fillRect(0,y,W,1);
       g.fillStyle = 'rgba(0,0,0,.10)'; g.fillRect(0,y+1,W,2);
+    }
+    // 排水溝・継ぎ目
+    for(let x=26; x<W; x+=86){
+      g.fillStyle = 'rgba(62,66,66,.28)'; g.fillRect(x,H-26,24,8);
+      g.fillStyle = 'rgba(0,0,0,.20)';
+      for(let sx=0;sx<5;sx++) g.fillRect(x+3+sx*4,H-24,1,4);
     }
 
     // 雨だれ・汚れ
@@ -4287,7 +4854,7 @@
     tex.minFilter = THREE.LinearMipmapLinearFilter;
     tex.magFilter = THREE.LinearFilter;
     tex.generateMipmaps = true;
-    tex.anisotropy = Math.min(8, renderer.capabilities.getMaxAnisotropy ? renderer.capabilities.getMaxAnisotropy() : 1);
+    tex.anisotropy = Math.min(4, renderer.capabilities.getMaxAnisotropy ? renderer.capabilities.getMaxAnisotropy() : 1);
     tex.userData.sharedTexture = true;
     tex.needsUpdate = true;
     return tex;
@@ -4343,7 +4910,7 @@
     }
     const tex = new THREE.CanvasTexture(c);
     tex.minFilter = THREE.LinearMipmapLinearFilter; tex.magFilter = THREE.LinearFilter; tex.generateMipmaps = true;
-    tex.anisotropy = Math.min(8, renderer.capabilities.getMaxAnisotropy ? renderer.capabilities.getMaxAnisotropy() : 1);
+    tex.anisotropy = Math.min(4, renderer.capabilities.getMaxAnisotropy ? renderer.capabilities.getMaxAnisotropy() : 1);
     tex.userData.sharedTexture = true; tex.needsUpdate = true;
     return tex;
   }
@@ -4363,7 +4930,7 @@
     for(let y=124;y<H-86;y+=78){ g.fillStyle='rgba(245,247,248,.70)'; g.fillRect(82,y,W-164,6); }
     const tex = new THREE.CanvasTexture(c);
     tex.minFilter = THREE.LinearMipmapLinearFilter; tex.magFilter = THREE.LinearFilter; tex.generateMipmaps = true;
-    tex.anisotropy = Math.min(8, renderer.capabilities.getMaxAnisotropy ? renderer.capabilities.getMaxAnisotropy() : 1);
+    tex.anisotropy = Math.min(4, renderer.capabilities.getMaxAnisotropy ? renderer.capabilities.getMaxAnisotropy() : 1);
     tex.userData.sharedTexture = true; tex.needsUpdate = true;
     return tex;
   }
@@ -4660,7 +5227,7 @@
     entranceForest.rotation.y = Math.PI;
     entranceForest.renderOrder = 2;
     world.add(entranceForest);
-    const entranceForestWide = new THREE.Mesh(new THREE.PlaneGeometry(92.0, 18.2), getTunnelForestMat());
+    const entranceForestWide = new THREE.Mesh(new THREE.PlaneGeometry(108.0, 19.2), getTunnelForestMat());
     entranceForestWide.position.set(0,13.7,zStart + 12.8);
     entranceForestWide.rotation.y = Math.PI;
     entranceForestWide.renderOrder = 0;
@@ -4682,11 +5249,40 @@
       forestNearLow.renderOrder = 5;
       world.add(forestNearLow);
       // 入口脇の透け対策。トンネル口には被せず、左右外側だけ草の板を足す
-      const portalGrass = new THREE.Mesh(new THREE.PlaneGeometry(4.2, 4.0), getTunnelForestMat());
-      portalGrass.position.set(side*10.9, 4.2, zStart + 0.85);
-      portalGrass.rotation.y = side>0 ? -Math.PI*0.46 : Math.PI*0.46;
-      portalGrass.renderOrder = 6;
-      world.add(portalGrass);
+      const portalGrassWide = new THREE.Mesh(new THREE.PlaneGeometry(10.5, 7.2), getTunnelForestMat());
+      portalGrassWide.position.set(side*17.2, 6.0, zStart + 2.8);
+      portalGrassWide.rotation.y = side>0 ? -Math.PI*0.56 : Math.PI*0.56;
+      portalGrassWide.renderOrder = 5;
+      world.add(portalGrassWide);
+      const portalShoulder = new THREE.Mesh(new THREE.BoxGeometry(6.0,.12,9.2), vergeMat);
+      portalShoulder.position.set(side*15.4,.10,zStart + 3.4);
+      portalShoulder.rotation.z = side*.06;
+      world.add(portalShoulder);
+      const portalCurtain = new THREE.Mesh(new THREE.PlaneGeometry(12.0, 8.4), getTunnelForestMat());
+      portalCurtain.position.set(side*20.6, 6.4, zStart + 4.8);
+      portalCurtain.rotation.y = side>0 ? -Math.PI*0.62 : Math.PI*0.62;
+      portalCurtain.renderOrder = 4;
+      world.add(portalCurtain);
+      // ピンポイントの透け埋め：左右の低い法面と草地を追加して空色を確実に遮る
+      const sealBerm = new THREE.Mesh(new THREE.BoxGeometry(6.6,2.2,6.8), slopeMat);
+      sealBerm.position.set(side*19.4, 2.2, zStart + 4.6);
+      sealBerm.rotation.z = side<0 ? .16 : -.16;
+      world.add(sealBerm);
+      const sealGround = new THREE.Mesh(new THREE.BoxGeometry(8.2,.10,8.4), vergeMat);
+      sealGround.position.set(side*19.2, .08, zStart + 5.0);
+      world.add(sealGround);
+      const sideSeal = new THREE.Mesh(new THREE.PlaneGeometry(side>0 ? 10.8 : 6.6, side>0 ? 7.4 : 5.4), getTunnelForestMat());
+      sideSeal.position.set(side>0 ? side*23.2 : side*24.6, side>0 ? 5.8 : 5.1, zStart + (side>0 ? 4.4 : 5.2));
+      sideSeal.rotation.y = side>0 ? -Math.PI*0.74 : Math.PI*0.70;
+      sideSeal.renderOrder = 3;
+      world.add(sideSeal);
+      if(side>0){
+        const rightFix = new THREE.Mesh(new THREE.PlaneGeometry(9.0, 6.8), getTunnelForestMat());
+        rightFix.position.set(18.6, 5.2, zStart + 1.9);
+        rightFix.rotation.y = -Math.PI*0.60;
+        rightFix.renderOrder = 4;
+        world.add(rightFix);
+      }
     });
 
     const exitHill = new THREE.Mesh(new THREE.PlaneGeometry(58.0, 15.4), getTunnelHillMat());
@@ -4699,7 +5295,7 @@
     exitForest.rotation.y = 0;
     exitForest.renderOrder = 2;
     world.add(exitForest);
-    const exitForestWide = new THREE.Mesh(new THREE.PlaneGeometry(92.0, 18.2), getTunnelForestMat());
+    const exitForestWide = new THREE.Mesh(new THREE.PlaneGeometry(108.0, 19.2), getTunnelForestMat());
     exitForestWide.position.set(0,13.7,zStart - length - 12.8);
     exitForestWide.rotation.y = 0;
     exitForestWide.renderOrder = 0;
@@ -4720,11 +5316,39 @@
       forestNearLow.rotation.y = side>0 ? Math.PI*0.58 : -Math.PI*0.58;
       forestNearLow.renderOrder = 5;
       world.add(forestNearLow);
-      const portalGrass = new THREE.Mesh(new THREE.PlaneGeometry(4.2, 4.0), getTunnelForestMat());
-      portalGrass.position.set(side*10.9, 4.2, zStart - length - 0.85);
-      portalGrass.rotation.y = side>0 ? Math.PI*0.46 : -Math.PI*0.46;
-      portalGrass.renderOrder = 6;
-      world.add(portalGrass);
+      const portalGrassWide = new THREE.Mesh(new THREE.PlaneGeometry(10.5, 7.2), getTunnelForestMat());
+      portalGrassWide.position.set(side*17.2, 6.0, zStart - length - 2.8);
+      portalGrassWide.rotation.y = side>0 ? Math.PI*0.56 : -Math.PI*0.56;
+      portalGrassWide.renderOrder = 5;
+      world.add(portalGrassWide);
+      const portalShoulder = new THREE.Mesh(new THREE.BoxGeometry(6.0,.12,9.2), vergeMat);
+      portalShoulder.position.set(side*15.4,.10,zStart - length - 3.4);
+      portalShoulder.rotation.z = side*.06;
+      world.add(portalShoulder);
+      const portalCurtain = new THREE.Mesh(new THREE.PlaneGeometry(12.0, 8.4), getTunnelForestMat());
+      portalCurtain.position.set(side*20.6, 6.4, zStart - length - 4.8);
+      portalCurtain.rotation.y = side>0 ? Math.PI*0.62 : -Math.PI*0.62;
+      portalCurtain.renderOrder = 4;
+      world.add(portalCurtain);
+      const sealBerm = new THREE.Mesh(new THREE.BoxGeometry(6.6,2.2,6.8), slopeMat);
+      sealBerm.position.set(side*19.4, 2.2, zStart - length - 4.6);
+      sealBerm.rotation.z = side<0 ? .16 : -.16;
+      world.add(sealBerm);
+      const sealGround = new THREE.Mesh(new THREE.BoxGeometry(8.2,.10,8.4), vergeMat);
+      sealGround.position.set(side*19.2, .08, zStart - length - 5.0);
+      world.add(sealGround);
+      const sideSeal = new THREE.Mesh(new THREE.PlaneGeometry(side>0 ? 10.8 : 6.6, side>0 ? 7.4 : 5.4), getTunnelForestMat());
+      sideSeal.position.set(side>0 ? side*23.2 : side*24.6, side>0 ? 5.8 : 5.1, zStart - length - (side>0 ? 4.4 : 5.2));
+      sideSeal.rotation.y = side>0 ? Math.PI*0.74 : -Math.PI*0.70;
+      sideSeal.renderOrder = 3;
+      world.add(sideSeal);
+      if(side>0){
+        const rightFix = new THREE.Mesh(new THREE.PlaneGeometry(9.0, 6.8), getTunnelForestMat());
+        rightFix.position.set(18.6, 5.2, zStart - length - 1.9);
+        rightFix.rotation.y = Math.PI*0.60;
+        rightFix.renderOrder = 4;
+        world.add(rightFix);
+      }
     });
 
     const exitGlow = new THREE.Mesh(new THREE.PlaneGeometry(8.0,4.8), getTunnelPortalLightMat(.22));
