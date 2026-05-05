@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width,initial-scale=1.0,maximum-scale=1.0,user-scalable=no" />
-<title>電車運転シミュレーター 軽量ストリーミング版 v1</title>
+<title>電車運転シミュレーター 晴れ遠景山画像・チャンク削除強化版</title>
 <style>
   :root{
     --panel:#090b0d;
@@ -22,6 +22,7 @@
 
   /* rain windshield */
   .rainGlass{
+    display:none;
     position:absolute;inset:0;z-index:5;pointer-events:none;
     background:
       radial-gradient(circle at 12% 18%,rgba(255,255,255,.32) 0 1px,transparent 3px),
@@ -465,8 +466,9 @@
 (() => {
   const wrap = document.getElementById('threeWrap');
   const scene = new THREE.Scene();
-  scene.background = new THREE.Color(0x9aa7ad);
-  scene.fog = new THREE.Fog(0x9aa7ad, 90, 460);
+  // 晴れ背景：雨天の灰色空をやめ、遠景山がぼけすぎない明るい空にする
+  scene.background = new THREE.Color(0xbfdcf0);
+  scene.fog = new THREE.Fog(0xbfdcf0, 180, 760);
 
   const camera = new THREE.PerspectiveCamera(58, innerWidth / innerHeight, 0.1, 900);
   camera.position.set(0, 2.55, 4.5);
@@ -479,10 +481,10 @@
   renderer.shadowMap.type = THREE.PCFSoftShadowMap;
   wrap.appendChild(renderer.domElement);
 
-  const hemi = new THREE.HemisphereLight(0xb7c7d7, 0x253018, 1.35);
+  const hemi = new THREE.HemisphereLight(0xdbeeff, 0x35451f, 1.45);
   scene.add(hemi);
   const dir = new THREE.DirectionalLight(0xffffff, 1.2);
-  dir.position.set(-40, 80, 20);
+  dir.position.set(-45, 90, 35);
   dir.castShadow = true;
   scene.add(dir);
 
@@ -518,17 +520,26 @@
   };
 
   function makeWindowTexture(color1, color2){
-    const c=document.createElement('canvas');c.width=256;c.height=256;const g=c.getContext('2d');
-    g.fillStyle=color1;g.fillRect(0,0,256,256);
-    for(let y=18;y<240;y+=36){for(let x=16;x<240;x+=42){
-      g.fillStyle = (Math.random()<.18)?'#d6e6ee':color2;
-      g.fillRect(x,y,26,18);
-      g.fillStyle='rgba(255,255,255,.16)';g.fillRect(x+2,y+2,8,14);
-    }}
-    g.fillStyle='rgba(0,0,0,.16)';
-    for(let y=0;y<256;y+=36)g.fillRect(0,y,256,2);
-    for(let x=0;x<256;x+=42)g.fillRect(x,0,2,256);
-    const tex=new THREE.CanvasTexture(c);tex.wrapS=tex.wrapT=THREE.RepeatWrapping;tex.repeat.set(1,1);
+    // 軽量版ビル窓テクスチャ：256pxの細かい窓描画をやめ、64pxの単純な横帯＋少数の窓だけにする。
+    // 見た目は「ビルの窓がある」程度に残しつつ、CanvasTextureの容量と描画負荷を削減。
+    const c=document.createElement('canvas');c.width=64;c.height=64;const g=c.getContext('2d');
+    g.fillStyle=color1;g.fillRect(0,0,64,64);
+    g.fillStyle='rgba(0,0,0,.13)';
+    for(let y=0;y<64;y+=16)g.fillRect(0,y,64,1);
+    g.fillStyle=color2;
+    for(let y=7;y<60;y+=16){
+      for(let x=8;x<60;x+=18){
+        if(((x+y)/18|0)%3!==0) g.fillRect(x,y,9,5);
+      }
+    }
+    g.fillStyle='rgba(255,235,150,.34)';
+    g.fillRect(26,7,9,5);
+    const tex=new THREE.CanvasTexture(c);
+    tex.wrapS=tex.wrapT=THREE.RepeatWrapping;
+    tex.repeat.set(1,1);
+    tex.minFilter=THREE.LinearFilter;
+    tex.magFilter=THREE.LinearFilter;
+    tex.generateMipmaps=false;
     return tex;
   }
 
@@ -538,6 +549,16 @@
     new THREE.MeshStandardMaterial({map:makeWindowTexture('#b8b4aa','#758994'), roughness:.82}),
     new THREE.MeshStandardMaterial({map:makeWindowTexture('#8f9699','#4b5d66'), roughness:.85})
   ];
+
+  // チャンク削除時に、全区間で共有しているマテリアルまでdisposeしないための印。
+  // 生成ごとに作られる一時マテリアルだけを確実に破棄し、長時間走行時のメモリ増加を抑える。
+  function markSharedMaterial(m){
+    if(!m) return;
+    m.userData.sharedMaterial = true;
+    if(m.map) m.map.userData.sharedTexture = true;
+  }
+  Object.values(mat).forEach(markSharedMaterial);
+  buildingMats.forEach(markSharedMaterial);
 
   const world = new THREE.Group();
   scene.add(world);
@@ -814,13 +835,8 @@
     b.position.set(side*setback, h/2-0.28, z + (Math.random()-.5)*16);
     b.rotation.y = side*(Math.random()*.05);
     b.castShadow=true; b.receiveShadow=true; world.add(b);
-    const floors = Math.min(10, Math.floor(h/3));
-    for(let f=1; f<floors; f++){
-      if(Math.random()<.75){
-        const band = new THREE.Mesh(new THREE.BoxGeometry(w*1.04,.045,d*1.03), new THREE.MeshStandardMaterial({color:0xdfe8ea,roughness:.42,metalness:.08}));
-        band.position.set(b.position.x, f*3.0, b.position.z); world.add(band);
-      }
-    }
+    // 窓階ごとの細い3D帯は大量メッシュになるため削除。
+    // 窓表現は軽量テクスチャに集約して、ビル1棟=基本1メッシュに近づける。
     if(Math.random()<.65){
       const shop = new THREE.Mesh(new THREE.BoxGeometry(w*1.02,.65,d*1.04), new THREE.MeshStandardMaterial({color:[0x555555,0x777777,0x999999,0x333333][Math.floor(Math.random()*4)],roughness:.85,metalness:.04}));
       shop.position.set(b.position.x,1.25,b.position.z-side*d*.52); world.add(shop);
@@ -844,6 +860,7 @@
     leafB: new THREE.MeshStandardMaterial({color:0x3f8a3d, roughness:.9}),
     leafC: new THREE.MeshStandardMaterial({color:0x6fa646, roughness:.88})
   };
+  Object.values(treeMats).forEach(markSharedMaterial);
 
   function cylBetween(a,b,r,material,segments=9){
     const va = new THREE.Vector3(a[0],a[1],a[2]);
@@ -959,6 +976,148 @@
   }
 
 
+  // 田舎・山間部の遠景山：多数の3Dコーンではなく、CanvasTextureの画像板で軽量表示する。
+  // 板は線路に沿って左右に並ぶため、前方から近づいて左右へ流れていくように見える。
+  let ruralMountainTexture = null;
+  let ruralMountainMat = null;
+  let ruralMountainMatFar = null;
+
+  function createRuralMountainTexture(){
+    const c = document.createElement('canvas');
+    // 画像板の粗さを減らすため、以前より高解像度の山画像をCanvasで生成する
+    c.width = 2048;
+    c.height = 512;
+    const g = c.getContext('2d');
+    g.clearRect(0,0,c.width,c.height);
+
+    // 晴天に合わせて、遠景画像内にも薄い青空グラデーションを入れる。
+    // ただし上部は透明寄りにして、scene.backgroundと自然につなげる。
+    const sky = g.createLinearGradient(0,0,0,c.height);
+    sky.addColorStop(0,'rgba(191,220,240,0.00)');
+    sky.addColorStop(.45,'rgba(191,220,240,0.06)');
+    sky.addColorStop(1,'rgba(191,220,240,0.00)');
+    g.fillStyle = sky;
+    g.fillRect(0,0,c.width,c.height);
+
+    function smoothRidge(seed, amp, base, step, color, alpha){
+      const pts=[];
+      for(let x=-step; x<=c.width+step; x+=step){
+        const n1 = Math.sin((x+seed)*0.006) * amp;
+        const n2 = Math.sin((x+seed*1.7)*0.014) * amp*.45;
+        const n3 = Math.sin((x+seed*2.3)*0.031) * amp*.18;
+        pts.push([x, base + n1 + n2 + n3]);
+      }
+      g.beginPath();
+      g.moveTo(0,c.height);
+      pts.forEach(([x,y])=>g.lineTo(x,y));
+      g.lineTo(c.width,c.height);
+      g.closePath();
+      g.fillStyle = color.replace('ALPHA', alpha);
+      g.fill();
+    }
+
+    // 奥・中・手前の山を重ねる。単純な三角山ではなく稜線を滑らかにして不鮮明感を減らす。
+    smoothRidge(11, 36, 190, 72, 'rgba(107,145,103,ALPHA)', .32);
+    smoothRidge(67, 48, 238, 64, 'rgba(76,122,78,ALPHA)', .50);
+    smoothRidge(149, 40, 302, 56, 'rgba(48,98,55,ALPHA)', .48);
+
+    // 手前に薄い森のシルエットを画像として入れる。3D木を遠景に大量生成しないための代替。
+    g.fillStyle = 'rgba(37,91,49,0.42)';
+    for(let x=0; x<c.width; x+=10){
+      const h = 16 + 18*Math.abs(Math.sin(x*.021)) + 9*Math.sin(x*.053+1.7);
+      g.beginPath();
+      g.moveTo(x, 360);
+      g.lineTo(x+5, 360-h);
+      g.lineTo(x+10, 360);
+      g.closePath();
+      g.fill();
+    }
+
+    // 稜線ハイライト。雨天用の強い霧ではなく、晴れの日の薄い空気感にする。
+    g.strokeStyle = 'rgba(219,235,219,0.20)';
+    g.lineWidth = 2;
+    for(let y of [206,254,318]){
+      g.beginPath();
+      for(let x=0; x<=c.width; x+=20){
+        const yy = y + Math.sin(x*.008+y)*12 + Math.sin(x*.022)*5;
+        if(x===0) g.moveTo(x,yy); else g.lineTo(x,yy);
+      }
+      g.stroke();
+    }
+
+    // 下部だけ少し霞ませ、板の下端を目立たせない
+    const haze = g.createLinearGradient(0,260,0,c.height);
+    haze.addColorStop(0,'rgba(191,220,240,0.00)');
+    haze.addColorStop(1,'rgba(191,220,240,0.18)');
+    g.fillStyle = haze;
+    g.fillRect(0,260,c.width,c.height);
+
+    const tex = new THREE.CanvasTexture(c);
+    tex.wrapS = THREE.RepeatWrapping;
+    tex.wrapT = THREE.ClampToEdgeWrapping;
+    tex.repeat.set(1,1);
+    tex.anisotropy = Math.min(8, renderer.capabilities.getMaxAnisotropy ? renderer.capabilities.getMaxAnisotropy() : 1);
+    tex.userData.sharedTexture = true;
+    tex.needsUpdate = true;
+    return tex;
+  }
+
+  function getRuralMountainMaterial(far=false){
+    if(!ruralMountainTexture) ruralMountainTexture = createRuralMountainTexture();
+    if(far){
+      if(!ruralMountainMatFar){
+        ruralMountainMatFar = new THREE.MeshBasicMaterial({
+          map:ruralMountainTexture,
+          transparent:true,
+          opacity:.52,
+          depthWrite:false,
+          fog:true,
+          side:THREE.DoubleSide
+        });
+        markSharedMaterial(ruralMountainMatFar);
+      }
+      return ruralMountainMatFar;
+    }
+    if(!ruralMountainMat){
+      ruralMountainMat = new THREE.MeshBasicMaterial({
+        map:ruralMountainTexture,
+        transparent:true,
+        opacity:.78,
+        depthWrite:false,
+        fog:true,
+        side:THREE.DoubleSide
+      });
+      markSharedMaterial(ruralMountainMat);
+    }
+    return ruralMountainMat;
+  }
+
+  function addRuralMountainImagePanels(z, zone){
+    const isMountain = zone === 'mountain';
+    const panelLen = isMountain ? 320 : 280;
+    const panelH = isMountain ? 50 : 42;
+    const nearX = isMountain ? 68 : 60;
+    const farX = isMountain ? 92 : 82;
+    const baseY = isMountain ? 18 : 15;
+
+    [-1,1].forEach(side=>{
+      // 手前側の山画像。線路方向に長い1枚板なので、走行時に左右へ流れる。
+      const near = new THREE.Mesh(new THREE.PlaneGeometry(panelLen, panelH), getRuralMountainMaterial(false));
+      near.position.set(side * nearX, baseY, z - 38);
+      near.rotation.y = side > 0 ? -Math.PI / 2 : Math.PI / 2;
+      near.renderOrder = -20;
+      world.add(near);
+
+      // 奥側に薄い山を重ね、板1枚感を減らす。これも画像なので軽い。
+      const far = new THREE.Mesh(new THREE.PlaneGeometry(panelLen * 1.18, panelH * .88), getRuralMountainMaterial(true));
+      far.position.set(side * farX, baseY + 3.2, z - 92);
+      far.rotation.y = side > 0 ? -Math.PI / 2 : Math.PI / 2;
+      far.renderOrder = -30;
+      world.add(far);
+    });
+  }
+
+
   // 遠景背景：運転席や計器類は触らず、ゲーム世界側だけに街・山の奥行きを追加する
   function addDistantBackground(z, zone){
     // addSideObjects は短い間隔で呼ばれるため、遠景は間引いて配置して処理負荷を抑える
@@ -988,45 +1147,17 @@
           b.receiveShadow = true;
           world.add(b);
 
-          // 遠景でも単なる箱に見えないよう、薄い窓列を少しだけ入れる
-          if(Math.random()<.72){
-            const rows = Math.min(9, Math.floor(h/4));
-            const winMat = new THREE.MeshBasicMaterial({color:0x9fb0b7});
-            for(let r=1;r<rows;r++){
-              const band = new THREE.Mesh(new THREE.BoxGeometry(w*.72,.045,.06), winMat);
-              band.position.set(x, r*3.5, zz - d*.51);
-              world.add(band);
-            }
-          }
+          // 遠景窓の3D帯は描画負荷が大きいため省略。霧色の箱だけで遠景ビル感を出す。
         }
       });
       return;
     }
 
     if(isRural){
-      // 田舎・山間部：遠くに連なる山並みを配置。近景は民家・木、遠景は山で奥行きを出す。
-      const mountainMats = [
-        new THREE.MeshStandardMaterial({color:0x4f6f4e, roughness:.96}),
-        new THREE.MeshStandardMaterial({color:0x3f5f48, roughness:.98}),
-        new THREE.MeshStandardMaterial({color:0x6f8558, roughness:.95})
-      ];
-      [-1,1].forEach(side=>{
-        for(let i=0;i<5;i++){
-          const cone = new THREE.Mesh(new THREE.ConeGeometry(10 + Math.random()*10, 12 + Math.random()*14, 4), mountainMats[i%mountainMats.length]);
-          cone.position.set(side*(34 + i*9 + Math.random()*12), 5.2 + Math.random()*2.2, z - 76 + Math.random()*150);
-          cone.rotation.y = Math.PI/4 + Math.random()*.35;
-          cone.scale.z = .55 + Math.random()*.35;
-          world.add(cone);
-        }
-        // 山の手前に低い林の帯を置く
-        const forestMat = new THREE.MeshStandardMaterial({color:0x2f5b31, roughness:.98});
-        for(let i=0;i<10;i++){
-          const crown = new THREE.Mesh(new THREE.SphereGeometry(1.2 + Math.random()*1.8, 10, 8), forestMat);
-          crown.scale.set(1.0, 1.35 + Math.random()*.6, .65);
-          crown.position.set(side*(23 + Math.random()*18), 2.4 + Math.random()*1.3, z - 40 + Math.random()*120);
-          world.add(crown);
-        }
-      });
+      // 田舎・山間部：遠景の山は3Dコーンや大量の林ではなく、画像板で軽量表示。
+      // 近距離の木・民家・畑は addSideObjects 側で従来通り生成する。
+      addRuralMountainImagePanels(z, zone);
+      return;
     }
   }
 
@@ -1092,10 +1223,8 @@
         if(Math.random()<.82) addOldRuralHouse(side,z-7+Math.random()*14, zone==='mountain'?0.86:1.0);
         if(Math.random()<.95) addRiceField(side,z, true);
         if(Math.random()<.78) addRuralUtilityPole(side,z-12+Math.random()*24);
-        // 奥の林：山・田舎の背景密度を増やす
-        for(let i=0;i<(zone==='mountain'?8:5);i++){
-          addRealisticTree(side*(15+Math.random()*12), z-16+Math.random()*32, 1.1+Math.random()*.65, side);
-        }
+        // 奥の林は3D木を増やさず、山画像内の森シルエットで表現する。
+        // 近距離の木・家・畑は上の処理で維持。
       });
       return;
     }
@@ -1601,10 +1730,20 @@
 
   function disposeObject3D(obj){
     obj.traverse(child=>{
-      // 共有マテリアルをdisposeすると、残っている区間まで表示崩れするため、
-      // 通過済み区間のジオメトリだけを確実に破棄する。
-      if(child.geometry) child.geometry.dispose();
+      if(child.geometry && !child.geometry.userData.sharedGeometry){
+        child.geometry.dispose();
+      }
+      const materials = Array.isArray(child.material) ? child.material : (child.material ? [child.material] : []);
+      materials.forEach(m=>{
+        if(!m || m.userData.sharedMaterial) return;
+        ['map','alphaMap','aoMap','bumpMap','normalMap','roughnessMap','metalnessMap','emissiveMap'].forEach(k=>{
+          const tex = m[k];
+          if(tex && !tex.userData.sharedTexture) tex.dispose();
+        });
+        m.dispose();
+      });
     });
+    obj.clear();
   }
 
   function withChunkGroup(group, fn){
