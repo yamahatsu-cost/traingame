@@ -1301,9 +1301,10 @@
     };
 
     const palettes = {
-      deep:   ['#0a260d','#0f3411','#154615','#1b591b','#236e20','#2c8128','#379431','#43a63c'],
-      bright: ['#123413','#194919','#215f20','#2d7828','#3d9333','#50ac41','#69c65a','#84db77'],
-      yellow: ['#576d16','#73881d','#8ea322','#adc033','#c9cf4b','#e0d86d','#efe79a']
+      // 全体を濃い緑寄りにしつつ、所々に明るい葉色を混ぜる
+      deep:   ['#081f0b','#0b2b0f','#103913','#154e17','#1b631d','#237625','#2b8a2b','#339b31'],
+      bright: ['#103112','#174118','#20541f','#296829','#347d31','#41933b','#56ab4a','#72c45f'],
+      yellow: ['#465b14','#5e751a','#789120','#93ab27','#aec136','#c6d257','#dbe487']
     };
     const pal = palettes[mode] || palettes.deep;
 
@@ -1311,9 +1312,12 @@
 
     // 不規則な樹冠シルエットを複数の塊で作る。丸い1個の塊にしない。
     const blobs = [
-      [W*.50,H*.58,90,98], [W*.40,H*.54,78,84], [W*.61,H*.54,82,86],
-      [W*.33,H*.60,64,72], [W*.68,H*.61,62,70], [W*.48,H*.44,74,70],
-      [W*.57,H*.42,60,58], [W*.40,H*.43,58,56], [W*.49,H*.69,68,56]
+      // 下側にも葉が垂れ下がる、tree3のようなボリュームある樹冠
+      [W*.50,H*.57,94,98], [W*.39,H*.54,80,84], [W*.61,H*.54,82,86],
+      [W*.33,H*.60,68,74], [W*.68,H*.61,66,72], [W*.48,H*.44,76,72],
+      [W*.57,H*.43,62,60], [W*.40,H*.44,60,58], [W*.49,H*.69,72,58],
+      [W*.44,H*.76,60,56], [W*.56,H*.76,60,56], [W*.31,H*.70,48,48], [W*.69,H*.70,48,48],
+      [W*.37,H*.80,42,40], [W*.63,H*.80,42,40]
     ];
     blobs.forEach((b, i)=>{
       const grad = g.createRadialGradient(b[0]-b[2]*.18,b[1]-b[3]*.20,4,b[0],b[1],Math.max(b[2],b[3]));
@@ -1330,7 +1334,7 @@
     });
 
     // 葉群の面を大量に描き込んで密度を上げる。
-    for(let i=0;i<3400;i++){
+    for(let i=0;i<4200;i++){
       const cluster = blobs[Math.floor(rnd()*blobs.length)];
       const x = cluster[0] + (rnd()-.5)*cluster[2]*1.6;
       const y = cluster[1] + (rnd()-.5)*cluster[3]*1.6;
@@ -1359,7 +1363,7 @@
     }
 
     // 斑点状の濃い群葉でふさふさ感を追加。
-    for(let i=0;i<260;i++){
+    for(let i=0;i<340;i++){
       const cluster = blobs[Math.floor(rnd()*blobs.length)];
       const x = cluster[0] + (rnd()-.5)*cluster[2]*1.2;
       const y = cluster[1] + (rnd()-.5)*cluster[3]*1.2;
@@ -1492,35 +1496,44 @@
     cylBetween([x+.03*side,baseY+.14,z+.015], [trunkTop[0]+.025*side,trunkTop[1],trunkTop[2]], .072*scale, treeMats.barkDark, 8);
 
     const branchStarts = [];
-    const branchCount = 6 + Math.floor(Math.random()*2);
+    const branchCount = 7 + Math.floor(Math.random()*3);
     for(let i=0;i<branchCount;i++){
-      const t = .56 + i/(branchCount-1)*.16;
-      const start = [x + lean*t*.72, baseY + h*t, z + (Math.random()-.5)*.05];
+      const t = .50 + i/(branchCount-1)*.21;
+      const start = [x + lean*t*.74, baseY + h*t, z + (Math.random()-.5)*.08];
       const dir = (i - (branchCount-1)/2) / ((branchCount-1)/2 || 1);
-      const out = dir * (.58 + Math.random()*.38) * scale;
-      const up = (.24 + Math.random()*.30) * scale;
-      const dz = (Math.random()-.5) * .42 * scale;
+      const out = dir * (.70 + Math.random()*.46) * scale;
+      const up = (.20 + Math.random()*.28) * scale;
+      const dz = (Math.random()-.5) * .46 * scale;
       const end = [start[0]+out, start[1]+up, start[2]+dz];
       cylBetween(start,end,.028*scale, treeMats.trunk,7);
       branchStarts.push(end);
     }
 
-    // tree2 のように、上部に葉を密集させた一体感ある樹冠を作る。
-    const crownCenterY = baseY + h*.88;
-    const crownW = (3.05 + Math.random()*.30) * scale;
-    const crownH = (2.95 + Math.random()*.22) * scale;
-    const matMain = Math.random()<.06 ? treeMats.leafBillboardYellow : treeMats.leafBillboardDeep;
-    const matSub  = Math.random()<.42 ? treeMats.leafBillboardBright : treeMats.leafBillboardDeep;
+    // tree3寄りに、葉が下の方まで来る樹冠へ変更。
+    const crownCenterY = baseY + h*.74;
+    const crownW = (3.25 + Math.random()*.36) * scale;
+    const crownH = (3.55 + Math.random()*.34) * scale;
+    const matMain = Math.random()<.24 ? treeMats.leafBillboardBright : treeMats.leafBillboardDeep;
+    const matSub  = Math.random()<.58 ? treeMats.leafBillboardBright : treeMats.leafBillboardDeep;
+    const matAccent = Math.random()<.18 ? treeMats.leafBillboardBright : treeMats.leafBillboardDeep;
 
     const boards = [
-      [ 0.00,  0.00,  0.00, 1.04, 1.00,  Math.PI/2,                    matMain,  0.00],
-      [ 0.00,  0.04,  0.00, 1.00, 0.98,  Math.PI/2 + Math.PI/3,       matSub,   0.01],
-      [ 0.00,  0.05,  0.00, 1.00, 0.98,  Math.PI/2 - Math.PI/3,       matMain, -0.01],
-      [ 0.00, -0.16,  0.00, 0.94, 0.78,  Math.PI/2 + Math.PI/2,       matMain,  0.00],
-      [-0.34*side, 0.03,  0.12, 0.78, 0.80,  Math.PI/2 + Math.PI/6,   matSub,  -0.04],
-      [ 0.34*side, 0.03, -0.12, 0.78, 0.80,  Math.PI/2 - Math.PI/6,   matSub,   0.04],
-      [ 0.00,  0.28,  0.02, 0.76, 0.70,  Math.PI/2 + Math.PI/4,       matMain,  0.02],
-      [ 0.00,  0.26, -0.02, 0.76, 0.70,  Math.PI/2 - Math.PI/4,       matMain, -0.02]
+      [ 0.00,  0.10,  0.00, 1.02, 1.02,  Math.PI/2,                    matMain,   0.00],
+      [ 0.00,  0.14,  0.00, 0.98, 0.98,  Math.PI/2 + Math.PI/3,       matSub,    0.01],
+      [ 0.00,  0.14,  0.00, 0.98, 0.98,  Math.PI/2 - Math.PI/3,       matMain,  -0.01],
+      [ 0.00, -0.10,  0.00, 0.96, 0.92,  Math.PI/2 + Math.PI/2,       matSub,    0.00],
+      [-0.36*side, 0.06,  0.12, 0.84, 0.88,  Math.PI/2 + Math.PI/6,   matAccent, -0.04],
+      [ 0.36*side, 0.06, -0.12, 0.84, 0.88,  Math.PI/2 - Math.PI/6,   matAccent,  0.04],
+      [ 0.00,  0.34,  0.03, 0.80, 0.76,  Math.PI/2 + Math.PI/4,       matMain,   0.02],
+      [ 0.00,  0.32, -0.03, 0.80, 0.76,  Math.PI/2 - Math.PI/4,       matMain,  -0.02],
+      // 下側の葉量を増やす
+      [-0.46*side,-0.34,  0.10, 0.74, 0.90,  Math.PI/2 + Math.PI/5,   matSub,   -0.08],
+      [ 0.46*side,-0.34, -0.10, 0.74, 0.90,  Math.PI/2 - Math.PI/5,   matSub,    0.08],
+      [-0.18*side,-0.48,  0.18, 0.66, 0.84,  Math.PI/2 + Math.PI/8,   matMain,  -0.05],
+      [ 0.18*side,-0.48, -0.18, 0.66, 0.84,  Math.PI/2 - Math.PI/8,   matMain,   0.05],
+      [ 0.00, -0.56,  0.00, 0.72, 0.92,  Math.PI/2 + Math.PI/2,       matSub,    0.00],
+      [-0.54*side,-0.12,  0.00, 0.58, 0.66,  Math.PI/2 + Math.PI/2.5, matAccent, -0.03],
+      [ 0.54*side,-0.12,  0.00, 0.58, 0.66,  Math.PI/2 - Math.PI/2.5, matAccent,  0.03]
     ];
     boards.forEach(b=>{
       addLeafBillboard(
@@ -1533,18 +1546,27 @@
       );
     });
 
-    // 3D葉芯は外から見えすぎないよう内部だけに少量。
+    // 3D葉芯も少し増やして、葉の奥行きと密度を強める。
     const coreMats = [treeMats.leafCoreA, treeMats.leafCoreB, treeMats.leafCoreC];
-    for(let i=0;i<4;i++){
-      const angle = (i/4)*Math.PI*2 + Math.random()*.18;
-      const radius = (.12 + Math.random()*.22) * scale;
-      const lx = trunkTop[0] + Math.cos(angle)*radius*.42;
-      const ly = crownCenterY - .02*scale + Math.sin(i*1.1)*.08*scale + Math.random()*.10*scale;
-      const lz = trunkTop[2] + Math.sin(angle)*radius*.34;
-      addLeafCore(lx,ly,lz,(.13+Math.random()*.04)*scale,coreMats[i%coreMats.length]);
+    for(let i=0;i<7;i++){
+      const angle = (i/7)*Math.PI*2 + Math.random()*.18;
+      const radius = (.20 + Math.random()*.42) * scale;
+      const lx = trunkTop[0] + Math.cos(angle)*radius*.72;
+      const ly = crownCenterY - .18*scale + Math.sin(i*1.1)*.18*scale + Math.random()*.22*scale;
+      const lz = trunkTop[2] + Math.sin(angle)*radius*.58;
+      addLeafCore(lx,ly,lz,(.15+Math.random()*.05)*scale,coreMats[i%coreMats.length]);
     }
-    branchStarts.slice(0,4).forEach((b,i)=>{
-      addLeafCore(b[0], b[1]+.03*scale, b[2], (.11+Math.random()*.04)*scale, coreMats[(i+1)%coreMats.length]);
+    branchStarts.forEach((b,i)=>{
+      addLeafCore(b[0], b[1]+(.01+Math.random()*.06)*scale, b[2], (.12+Math.random()*.05)*scale, coreMats[(i+1)%coreMats.length]);
+      if(i < 5){
+        addLeafCore(
+          (b[0]+trunkTop[0])*.5,
+          (b[1]+crownCenterY)*.5 - .12*scale,
+          (b[2]+trunkTop[2])*.5,
+          (.11+Math.random()*.04)*scale,
+          coreMats[(i+2)%coreMats.length]
+        );
+      }
     });
 
     const base = new THREE.Mesh(sharedTreeGeos.base, new THREE.MeshStandardMaterial({color:0x315a2a,roughness:.95}));
