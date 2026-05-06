@@ -226,6 +226,7 @@
   .speaker{height:54px;width:160px;margin:5px auto;background:radial-gradient(circle,#1e2225 1px,transparent 3px);background-size:12px 12px;border-radius:6px;border:1px solid #222}
 
   .leverArea{
+    touch-action:none;
     grid-column:3 / span 2;grid-row:2;display:flex;align-items:stretch;justify-content:center;gap:10px;
     background:
       linear-gradient(180deg,#2a2f33 0%,#171b1e 34%,#070809 100%);
@@ -239,10 +240,12 @@
   }
   .leverScaleLeft .red{color:#ff333b}.leverScaleLeft .blue{color:#cfe6ff}
   .leverSlot{
+    touch-action:none;
     width:96px;height:100%;min-height:108px;border-radius:12px;background:linear-gradient(90deg,#030404 0%,#2a3033 50%,#030404 100%);
     border:1px solid #333a3f;position:relative;box-shadow:inset 0 0 18px #000;
   }
   .leverHandle{
+    touch-action:none;
     position:absolute;left:50%;top:var(--leverTop,42%);transform:translate(-50%,-50%);
     width:84px;height:32px;border-radius:20px;background:linear-gradient(#5a6064 0%,#171a1c 42%,#050606 60%,#2d3336 100%);
     box-shadow:0 8px 10px #000b,inset 0 2px 2px #ffffff2b;z-index:3;
@@ -291,16 +294,33 @@
   .routeLine:before,.routeLine:after{content:"";position:absolute;top:-6px;width:20px;height:20px;border-radius:50%;background:#111;border:3px solid #ffd400}
   .routeLine:before{left:0}.routeLine:after{right:0}
   @media(max-width:900px){
-    .meterLift{transform:translateY(calc(-34px + 2mm)) !important}
-    .meter{transform:none !important}
-    .dashboard{height:39.5vh;padding-left:5.8vw;padding-bottom:3.2vh;grid-template-columns:70px 14.5vw 21vw 11vw 22vw 12vw;gap:.55vw}
+    .meterLift{transform:none !important;gap:26px}
+    .meter{transform:none !important;width:150px;height:150px;min-width:150px;min-height:150px}
+    .dashboard{
+      left:50%;right:auto;bottom:0;width:1180px;height:760px;
+      transform:translateX(-50%) scale(var(--dashScale,.34));
+      transform-origin:bottom center;
+      padding:24px 30px 34px 82px;
+      grid-template-columns:82px 220px 280px 160px 300px 150px;
+      grid-template-rows:300px 340px;
+      gap:14px;
+    }
+    .frontSill{bottom:var(--dashScreenHeight,260px)}
+    .wiper{bottom:calc(var(--dashScreenHeight,260px) + 10px)}
     .leftMenu,.cameraMini{display:none}
     .routeStatus{left:8px;top:8px;width:230px;font-size:11px}
     .rightInfo{width:170px;font-size:12px}.rightInfo .big{font-size:20px}
     .stationPanel{width:170px;font-size:10px;right:6px;top:292px;bottom:auto}
     .topNotice{left:20%;right:20%;font-size:14px}
     .bottomButtons button{min-width:70px;font-size:12px;height:42px}
-    .meter{min-width:76px;min-height:76px}
+    .leftDevice{padding:14px;grid-template-columns:58px 1fr}
+    .monitorTop{font-size:14px}.monitorNext{font-size:28px}.monitor{padding:16px}.doors span{height:30px;line-height:28px;font-size:13px}
+    .statusPanel{font-size:14px}.lampList{font-size:18px;gap:10px}.lampDot{width:14px;height:14px}
+    .leverArea{transform:translateY(-72px) perspective(520px) rotateX(4deg);min-height:236px;padding:18px 18px;gap:16px}
+    .leverSlot{width:150px;min-height:210px}.leverHandle{width:132px;height:48px}.notchDisplay{width:72px;height:60px;font-size:34px}
+    .leverScaleLeft,.leverScaleRight{width:82px;font-size:18px}.leverHelp{font-size:13px}
+    .commandDock button{font-size:20px;min-height:90px}.commandDock{gap:10px;padding:10px}
+    .tripPanelFixed{right:18px;bottom:16px;min-width:210px;font-size:14px}.tripPanelFixed b{font-size:24px}
   }
 </style>
 </head>
@@ -6054,9 +6074,27 @@
     updateDashboard();
   }
   let dragging=false;
-  leverSlot.addEventListener('pointerdown',e=>{dragging=true;leverSlot.setPointerCapture(e.pointerId);setLeverFromY(e.clientY)});
-  leverSlot.addEventListener('pointermove',e=>{if(dragging)setLeverFromY(e.clientY)});
-  leverSlot.addEventListener('pointerup',()=>dragging=false);
+  const leverTouchTarget = document.getElementById('leverArea') || leverSlot;
+  function leverPointerDown(e){
+    e.preventDefault();
+    dragging=true;
+    try{ leverTouchTarget.setPointerCapture(e.pointerId); }catch(_e){}
+    setLeverFromY(e.clientY);
+  }
+  function leverPointerMove(e){
+    if(!dragging) return;
+    e.preventDefault();
+    setLeverFromY(e.clientY);
+  }
+  function leverPointerEnd(){ dragging=false; }
+  leverTouchTarget.addEventListener('pointerdown', leverPointerDown);
+  leverTouchTarget.addEventListener('pointermove', leverPointerMove);
+  leverTouchTarget.addEventListener('pointerup', leverPointerEnd);
+  leverTouchTarget.addEventListener('pointercancel', leverPointerEnd);
+  leverTouchTarget.addEventListener('lostpointercapture', leverPointerEnd);
+  leverTouchTarget.addEventListener('touchstart', e=>{ if(e.touches[0]){ e.preventDefault(); dragging=true; setLeverFromY(e.touches[0].clientY); } }, {passive:false});
+  leverTouchTarget.addEventListener('touchmove', e=>{ if(dragging && e.touches[0]){ e.preventDefault(); setLeverFromY(e.touches[0].clientY); } }, {passive:false});
+  leverTouchTarget.addEventListener('touchend', leverPointerEnd, {passive:false});
 
   addEventListener('keydown',e=>{
     const k=e.key;
@@ -6161,9 +6199,24 @@
   }
   requestAnimationFrame(animate);
 
+  function updateMobileDashboardScale(){
+    if(innerWidth <= 900){
+      const baseW = 1180;
+      const baseH = 760;
+      const scale = Math.min(1, innerWidth / baseW);
+      document.documentElement.style.setProperty('--dashScale', scale.toFixed(4));
+      document.documentElement.style.setProperty('--dashScreenHeight', (baseH * scale).toFixed(1) + 'px');
+    }else{
+      document.documentElement.style.removeProperty('--dashScale');
+      document.documentElement.style.removeProperty('--dashScreenHeight');
+    }
+  }
+  updateMobileDashboardScale();
+
   addEventListener('resize',()=>{
     camera.aspect=innerWidth/innerHeight;camera.updateProjectionMatrix();
     renderer.setSize(innerWidth,innerHeight);
+    updateMobileDashboardScale();
   });
 })();
 </script>
