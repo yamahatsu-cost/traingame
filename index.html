@@ -2564,13 +2564,38 @@
       fillFar2.receiveShadow = false; world.add(fillFar2);
     }
     if(!hasNearBuildings){
-      const edgeH = urbanKind==='city' ? 6.8 : urbanKind==='elevated' ? 6.0 : 5.5;
-      const edgeX = side*(20.2 + (urbanKind==='city' ? 1.4 : urbanKind==='elevated' ? 1.0 : .4));
-      const edge = new THREE.Mesh(new THREE.PlaneGeometry(34,edgeH), urbanInfillMats[edgeKey]);
-      edge.position.set(edgeX,edgeH*0.5-.1,z);
-      edge.rotation.y = side>0 ? -Math.PI/2 : Math.PI/2;
-      edge.renderOrder = -8;
-      world.add(edge);
+      // 以前ここに置いていたテクスチャビル群（Plane）は削除し、
+      // 代わりに低層3Dビル＋灰色道路で水色の抜けを埋める。
+      const gapRoadW = urbanKind==='city' ? 10.5 : urbanKind==='elevated' ? 9.2 : 8.6;
+      const gapRoad = new THREE.Mesh(new THREE.BoxGeometry(gapRoadW,.024,34), new THREE.MeshStandardMaterial({color:0x70767a, roughness:.94}));
+      gapRoad.position.set(side*(19.6 + gapRoadW*0.5), .017, z);
+      gapRoad.receiveShadow = false;
+      world.add(gapRoad);
+
+      const shoulder = new THREE.Mesh(new THREE.BoxGeometry(3.6,.022,34), new THREE.MeshStandardMaterial({color:0x9aa0a4, roughness:.96}));
+      shoulder.position.set(side*(18.0), .016, z);
+      shoulder.receiveShadow = false;
+      world.add(shoulder);
+
+      const infillCount = urbanKind==='city' ? 3 : 2;
+      for(let i=0;i<infillCount;i++){
+        const bw = 4.6 + Math.random()*4.8;
+        const bh = urbanKind==='city' ? 3.8 + Math.random()*4.8 : 3.4 + Math.random()*3.8;
+        const bd = 6.0 + Math.random()*4.4;
+        const infill = new THREE.Mesh(
+          new THREE.BoxGeometry(bw,bh,bd),
+          lowRiseBuildingMats[(i + (side>0?1:0)) % lowRiseBuildingMats.length]
+        );
+        infill.position.set(
+          side*(22.8 + i*5.6 + Math.random()*2.4),
+          bh/2 - .14,
+          z - 10 + i*8 + Math.random()*10
+        );
+        infill.rotation.y = side*(.012 + Math.random()*.03);
+        infill.castShadow = false;
+        infill.receiveShadow = false;
+        world.add(infill);
+      }
     }
 
     if(zone==='town' || zone==='city' || zone==='station' || zone==='suburb' || zone==='residential' || zone==='elevated'){
@@ -3026,9 +3051,9 @@
       for(let side of [-1,1]){
         for(let i=0;i<count;i++) addBuilding(side, z-12+i*12, zone);
         // 3Dビルが少ない住宅・駅・高架区間には、線路から少し離した低層3Dビルを追加する
-        const lowCount = zone==='city' ? 0 : zone==='station' ? 1 : zone==='elevated' ? 1 : zone==='residential' ? 1 : zone==='suburb' ? 0 : 0;
+        const lowCount = zone==='city' ? 1 : zone==='station' ? 1 : zone==='elevated' ? 1 : zone==='residential' ? 1 : zone==='suburb' ? 1 : 0;
         for(let j=0;j<lowCount;j++){
-          if(Math.random() < (zone==='city' ? .23 : zone==='station' ? .30 : .40)) addLowRiseInfillBuilding(side, z - 18 + j*20 + Math.random()*10, zone);
+          if(Math.random() < (zone==='city' ? .55 : zone==='station' ? .34 : zone==='elevated' ? .42 : zone==='residential' ? .45 : zone==='suburb' ? .38 : .40)) addLowRiseInfillBuilding(side, z - 18 + j*20 + Math.random()*10, zone);
         }
         if(zone==='suburb' || zone==='residential'){
           addTree(side,z,1.15);
