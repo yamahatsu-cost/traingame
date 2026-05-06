@@ -63,7 +63,7 @@
     background:linear-gradient(270deg,#07090a 0,#15191b 45%,rgba(20,24,27,.58) 80%,transparent 100%);
   }
   .frontSill{
-    position:absolute;z-index:11;left:7.4vw;right:3.8vw;bottom:38.8vh;height:22px;
+    position:absolute;z-index:11;left:7.4vw;right:3.8vw;bottom:35.0vh;height:22px;
     background:linear-gradient(#24282b,#0b0d0f 58%,#282c30);
     border-top:1px solid #53585b;border-bottom:1px solid #000;
     box-shadow:0 -8px 16px #0006,0 10px 18px #0008;
@@ -115,12 +115,12 @@
 
   /* dashboard */
   .dashboard{
-    position:absolute;z-index:30;left:0;right:0;bottom:0;height:37.5vh;
+    position:absolute;z-index:30;left:0;right:0;bottom:0;height:34.5vh;
     background:
       radial-gradient(circle at 52% 20%,rgba(255,255,255,.06),transparent 14%),
       linear-gradient(#23272a 0,#111416 9%,#0a0c0e 100%);
     border-top:2px solid #303539;box-shadow:0 -18px 36px #000b;
-    padding:1.8vh 2.2vw 3.6vh 7.2vw;
+    padding:1.4vh 2.2vw 2.8vh 7.2vw;
     display:grid;
     grid-template-columns: 82px 17.5vw 19.5vw 12vw 25vw 13vw;
     grid-template-rows: .84fr 16.5vh;
@@ -293,7 +293,7 @@
   @media(max-width:900px){
     .meterLift{transform:translateY(calc(-34px + 2mm)) !important}
     .meter{transform:none !important}
-    .dashboard{height:42.5vh;padding-left:5.8vw;padding-bottom:4.0vh;grid-template-columns:70px 14.5vw 21vw 11vw 22vw 12vw;gap:.55vw}
+    .dashboard{height:39.5vh;padding-left:5.8vw;padding-bottom:3.2vh;grid-template-columns:70px 14.5vw 21vw 11vw 22vw 12vw;gap:.55vw}
     .leftMenu,.cameraMini{display:none}
     .routeStatus{left:8px;top:8px;width:230px;font-size:11px}
     .rightInfo{width:170px;font-size:12px}.rightInfo .big{font-size:20px}
@@ -422,7 +422,6 @@
         <div class="knobWrap"><div class="knob"></div><div>ワイパー<br>弱　強</div></div>
       </div>
       <div class="speaker"></div>
-      <div class="tripMeter">走行距離<b id="tripMeterTxt">0.00 km</b></div>
     </section>
 
     <section class="commandDock">
@@ -444,6 +443,8 @@
       <div class="notchDisplay" id="notchDisplay">切</div>
       <div class="leverHelp">ドラッグ / ↑↓キー・W/S</div>
     </section>
+
+    <div class="tripPanelFixed">走行距離<b id="tripMeterTxt2">0.00 km</b></div>
   </div>
 
   <div class="bottomButtons">
@@ -2817,6 +2818,14 @@
         shoulderGrayFill.position.set(side*8.5,.010,z+1);
         shoulderGrayFill.receiveShadow = false;
         world.add(shoulderGrayFill);
+        const extremeGrayFill = new THREE.Mesh(new THREE.BoxGeometry(36.0,.018,244), pavementMat);
+        extremeGrayFill.position.set(side*78.0,.010,z+3);
+        extremeGrayFill.receiveShadow = false;
+        world.add(extremeGrayFill);
+        const skylineGrayShelf = new THREE.Mesh(new THREE.BoxGeometry(18.0,.018,238), pavementMat);
+        skylineGrayShelf.position.set(side*92.0,.010,z+5);
+        skylineGrayShelf.receiveShadow = false;
+        world.add(skylineGrayShelf);
 
         for(let i=0;i<5;i++){
           const w = 8 + Math.random()*12;
@@ -4764,9 +4773,9 @@
     g.clearRect(0,0,W,H);
 
     const hill = g.createLinearGradient(0,138,0,H);
-    hill.addColorStop(0,'#8ba17a');
-    hill.addColorStop(.54,'#6d865d');
-    hill.addColorStop(1,'#556b48');
+    hill.addColorStop(0,'#6d8c5d');
+    hill.addColorStop(.54,'#4f6f42');
+    hill.addColorStop(1,'#36552d');
     g.beginPath();
     g.moveTo(0,H);
     g.lineTo(0,292);
@@ -4787,11 +4796,11 @@
 
     // dense but more natural mixed forest canopy
     const layers = [
-      {baseY:346, color:'#243f20', size:42, jitter:22},
-      {baseY:322, color:'#31502a', size:36, jitter:19},
-      {baseY:298, color:'#43673a', size:31, jitter:17},
-      {baseY:274, color:'#567f4a', size:27, jitter:15},
-      {baseY:252, color:'#739766', size:23, jitter:12}
+      {baseY:350, color:'#1d3418', size:46, jitter:20},
+      {baseY:326, color:'#284620', size:40, jitter:18},
+      {baseY:302, color:'#35582c', size:34, jitter:16},
+      {baseY:278, color:'#456d39', size:30, jitter:14},
+      {baseY:254, color:'#5a8350', size:26, jitter:11}
     ];
     layers.forEach((layer, li)=>{
       for(let i=0;i<40;i++){
@@ -4815,7 +4824,7 @@
     });
 
     // darker trunks / understory silhouette
-    g.fillStyle = 'rgba(23,32,18,.34)';
+    g.fillStyle = 'rgba(16,24,12,.42)';
     for(let i=0;i<54;i++){
       const x = 6 + i*19;
       const h = 20 + Math.random()*30;
@@ -4825,8 +4834,8 @@
     // 下端は透明寄りにして、トンネルの口を埋めにくくする
     const clearFade = g.createLinearGradient(0,350,0,H);
     clearFade.addColorStop(0,'rgba(255,255,255,1)');
-    clearFade.addColorStop(.72,'rgba(255,255,255,.82)');
-    clearFade.addColorStop(1,'rgba(255,255,255,0)');
+    clearFade.addColorStop(.82,'rgba(255,255,255,.92)');
+    clearFade.addColorStop(1,'rgba(255,255,255,.18)');
     g.globalCompositeOperation = 'destination-in';
     g.fillStyle = clearFade;
     g.fillRect(0,0,W,H);
@@ -5167,6 +5176,12 @@
     m.userData.sharedMaterial = true;
     return m;
   }
+  function getTunnelForestDarkMat(opacity=.98){
+    if(!tunnelForestTex) tunnelForestTex = makeTunnelForestTexture();
+    const m = new THREE.MeshBasicMaterial({map:tunnelForestTex, color:0x70935f, alphaTest:.02, opacity, side:THREE.DoubleSide, depthWrite:false, transparent:true, fog:true});
+    m.userData.sharedMaterial = true;
+    return m;
+  }
   function getTunnelHillMat(){
     if(!tunnelHillTex) tunnelHillTex = makeTunnelHillTexture();
     const m = new THREE.MeshBasicMaterial({map:tunnelHillTex, alphaTest:.02, side:THREE.DoubleSide, depthWrite:false, transparent:true, fog:true});
@@ -5441,49 +5456,55 @@
     entranceHill.rotation.y = Math.PI;
     entranceHill.renderOrder = 1;
     world.add(entranceHill);
-    const entranceForest = new THREE.Mesh(new THREE.PlaneGeometry(72.0, 17.2), getTunnelForestMat());
+    const entranceForest = new THREE.Mesh(new THREE.PlaneGeometry(76.0, 18.0), getTunnelForestDarkMat());
     entranceForest.position.set(0,13.3,zStart + 9.0);
     entranceForest.rotation.y = Math.PI;
     entranceForest.renderOrder = 2;
     world.add(entranceForest);
-    const entranceForestWide = new THREE.Mesh(new THREE.PlaneGeometry(108.0, 19.2), getTunnelForestMat());
+    const entranceForestWide = new THREE.Mesh(new THREE.PlaneGeometry(118.0, 21.0), getTunnelForestDarkMat(.96));
     entranceForestWide.position.set(0,13.7,zStart + 12.8);
     entranceForestWide.rotation.y = Math.PI;
     entranceForestWide.renderOrder = 0;
     world.add(entranceForestWide);
+    const entrancePortalTopForest = new THREE.Mesh(new THREE.PlaneGeometry(50.0, 12.6), getTunnelForestDarkMat());
+    entrancePortalTopForest.position.set(0,10.9,zStart + 1.6);
+    entrancePortalTopForest.rotation.y = Math.PI;
+    entrancePortalTopForest.renderOrder = 5;
+    world.add(entrancePortalTopForest);
     [-1,1].forEach(side=>{
-      const forestSide = new THREE.Mesh(new THREE.PlaneGeometry(24.0, 13.6), getTunnelForestMat());
+      const entranceSideForestMat = getTunnelForestDarkMat();
+      const forestSide = new THREE.Mesh(new THREE.PlaneGeometry(28.0, 15.2), side>0 ? getTunnelForestDarkMat() : getTunnelForestMat());
       forestSide.position.set(side*26.8, 10.9, zStart + 8.2);
       forestSide.rotation.y = side>0 ? -Math.PI/2 : Math.PI/2;
       forestSide.renderOrder = 1;
       world.add(forestSide);
-      const forestNear = new THREE.Mesh(new THREE.PlaneGeometry(11.2, 9.4), getTunnelForestMat());
+      const forestNear = new THREE.Mesh(new THREE.PlaneGeometry(11.2, 9.4), entranceSideForestMat);
       forestNear.position.set(side*15.5, 7.2, zStart + 2.6);
       forestNear.rotation.y = side>0 ? -Math.PI*0.69 : Math.PI*0.69;
       forestNear.renderOrder = 4;
       world.add(forestNear);
-      const forestNearLow = new THREE.Mesh(new THREE.PlaneGeometry(9.8, 6.0), getTunnelForestMat());
+      const forestNearLow = new THREE.Mesh(new THREE.PlaneGeometry(9.8, 6.0), entranceSideForestMat);
       forestNearLow.position.set(side*11.9, 5.2, zStart + 0.8);
       forestNearLow.rotation.y = side>0 ? -Math.PI*0.58 : Math.PI*0.58;
       forestNearLow.renderOrder = 5;
       world.add(forestNearLow);
-      const forestNearFill = new THREE.Mesh(new THREE.PlaneGeometry(13.6, 7.6), getTunnelForestMat());
+      const forestNearFill = new THREE.Mesh(new THREE.PlaneGeometry(13.6, 7.6), entranceSideForestMat);
       forestNearFill.position.set(side*13.1, 5.9, zStart + 2.0);
       forestNearFill.rotation.y = side>0 ? -Math.PI*0.54 : Math.PI*0.54;
       forestNearFill.renderOrder = 6;
       world.add(forestNearFill);
-      const forestGapFill = new THREE.Mesh(new THREE.PlaneGeometry(12.4, 7.8), getTunnelForestMat());
+      const forestGapFill = new THREE.Mesh(new THREE.PlaneGeometry(12.4, 7.8), entranceSideForestMat);
       forestGapFill.position.set(side*16.2, 6.0, zStart + 3.4);
       forestGapFill.rotation.y = side>0 ? -Math.PI*0.48 : Math.PI*0.48;
       forestGapFill.renderOrder = 7;
       world.add(forestGapFill);
-      const forestGapLow = new THREE.Mesh(new THREE.PlaneGeometry(10.6, 5.8), getTunnelForestMat());
+      const forestGapLow = new THREE.Mesh(new THREE.PlaneGeometry(10.6, 5.8), entranceSideForestMat);
       forestGapLow.position.set(side*13.2, 4.6, zStart + 1.8);
       forestGapLow.rotation.y = side>0 ? -Math.PI*0.42 : Math.PI*0.42;
       forestGapLow.renderOrder = 8;
       world.add(forestGapLow);
       // 入口脇の透け対策。トンネル口には被せず、左右外側だけ草の板を足す
-      const portalGrassWide = new THREE.Mesh(new THREE.PlaneGeometry(10.5, 7.2), getTunnelForestMat());
+      const portalGrassWide = new THREE.Mesh(new THREE.PlaneGeometry(10.5, 7.2), entranceSideForestMat);
       portalGrassWide.position.set(side*17.2, 6.0, zStart + 2.8);
       portalGrassWide.rotation.y = side>0 ? -Math.PI*0.56 : Math.PI*0.56;
       portalGrassWide.renderOrder = 5;
@@ -5492,7 +5513,7 @@
       portalShoulder.position.set(side*15.4,.10,zStart + 3.4);
       portalShoulder.rotation.z = side*.06;
       world.add(portalShoulder);
-      const portalCurtain = new THREE.Mesh(new THREE.PlaneGeometry(12.0, 8.4), getTunnelForestMat());
+      const portalCurtain = new THREE.Mesh(new THREE.PlaneGeometry(13.8, 9.4), entranceSideForestMat);
       portalCurtain.position.set(side*20.6, 6.4, zStart + 4.8);
       portalCurtain.rotation.y = side>0 ? -Math.PI*0.62 : Math.PI*0.62;
       portalCurtain.renderOrder = 4;
@@ -5505,22 +5526,22 @@
       const sealGround = new THREE.Mesh(new THREE.BoxGeometry(8.2,.10,8.4), vergeMat);
       sealGround.position.set(side*19.2, .08, zStart + 5.0);
       world.add(sealGround);
-      const sideSeal = new THREE.Mesh(new THREE.PlaneGeometry(13.6, 8.0), getTunnelForestMat());
+      const sideSeal = new THREE.Mesh(new THREE.PlaneGeometry(15.8, 9.0), entranceSideForestMat);
       sideSeal.position.set(side*22.8, 6.0, zStart + 4.2);
       sideSeal.rotation.y = side>0 ? -Math.PI*0.72 : Math.PI*0.72;
       sideSeal.renderOrder = 3;
       world.add(sideSeal);
-      const innerSeal = new THREE.Mesh(new THREE.PlaneGeometry(9.8, 6.2), getTunnelForestMat());
+      const innerSeal = new THREE.Mesh(new THREE.PlaneGeometry(9.8, 6.2), entranceSideForestMat);
       innerSeal.position.set(side*9.4, 4.8, zStart + 2.5);
       innerSeal.rotation.y = side>0 ? -Math.PI*0.48 : Math.PI*0.48;
       innerSeal.renderOrder = 6;
       world.add(innerSeal);
-      const hedgeSeal = new THREE.Mesh(new THREE.PlaneGeometry(7.0, 4.4), getTunnelForestMat());
+      const hedgeSeal = new THREE.Mesh(new THREE.PlaneGeometry(7.0, 4.4), entranceSideForestMat);
       hedgeSeal.position.set(side*12.2, 3.1, zStart + 2.3);
       hedgeSeal.rotation.y = side>0 ? -Math.PI*0.36 : Math.PI*0.36;
       hedgeSeal.renderOrder = 8;
       world.add(hedgeSeal);
-      const nearBerm = new THREE.Mesh(new THREE.PlaneGeometry(7.2, 4.6), getTunnelForestMat());
+      const nearBerm = new THREE.Mesh(new THREE.PlaneGeometry(7.2, 4.6), entranceSideForestMat);
       nearBerm.position.set(side*13.0, 3.0, zStart + 2.8);
       nearBerm.rotation.y = side>0 ? -Math.PI*0.30 : Math.PI*0.30;
       nearBerm.renderOrder = 8;
@@ -5528,51 +5549,51 @@
       const groundSealWide = new THREE.Mesh(new THREE.BoxGeometry(13.4,.10,10.2), vergeMat);
       groundSealWide.position.set(side*15.4,.08,zStart + 3.9);
       world.add(groundSealWide);
-      const greenWaterHide = new THREE.Mesh(new THREE.PlaneGeometry(9.0,5.2), getTunnelForestMat());
+      const greenWaterHide = new THREE.Mesh(new THREE.PlaneGeometry(9.0,5.2), entranceSideForestMat);
       greenWaterHide.position.set(side*10.7,3.2,zStart + 1.7);
       greenWaterHide.rotation.y = side>0 ? -Math.PI*0.18 : Math.PI*0.18;
       greenWaterHide.renderOrder = 10;
       world.add(greenWaterHide);
-      const lowerFillBerm = new THREE.Mesh(new THREE.PlaneGeometry(8.8,5.6), getTunnelForestMat());
+      const lowerFillBerm = new THREE.Mesh(new THREE.PlaneGeometry(8.8,5.6), entranceSideForestMat);
       lowerFillBerm.position.set(side*14.0, 3.2, zStart + 2.2);
       lowerFillBerm.rotation.y = side>0 ? -Math.PI*0.40 : Math.PI*0.40;
       lowerFillBerm.renderOrder = 9;
       world.add(lowerFillBerm);
       if(side>0){
-        const rightFix = new THREE.Mesh(new THREE.PlaneGeometry(12.6, 8.2), getTunnelForestMat());
+        const rightFix = new THREE.Mesh(new THREE.PlaneGeometry(12.6, 8.2), getTunnelForestDarkMat());
         rightFix.position.set(17.8, 5.6, zStart + 1.8);
         rightFix.rotation.y = -Math.PI*0.60;
         rightFix.renderOrder = 4;
         world.add(rightFix);
-        const rightFixLow = new THREE.Mesh(new THREE.PlaneGeometry(9.4, 5.6), getTunnelForestMat());
+        const rightFixLow = new THREE.Mesh(new THREE.PlaneGeometry(9.4, 5.6), getTunnelForestDarkMat());
         rightFixLow.position.set(13.7, 4.2, zStart + 1.1);
         rightFixLow.rotation.y = -Math.PI*0.50;
         rightFixLow.renderOrder = 8;
         world.add(rightFixLow);
-        const rightGreenWall = new THREE.Mesh(new THREE.PlaneGeometry(8.4, 4.8), getTunnelForestMat());
-        rightGreenWall.position.set(10.8, 3.8, zStart + 1.5);
+        const rightGreenWall = new THREE.Mesh(new THREE.PlaneGeometry(10.6, 6.4), getTunnelForestDarkMat());
+        rightGreenWall.position.set(11.4, 4.0, zStart + 1.6);
         rightGreenWall.rotation.y = -Math.PI*0.32;
         rightGreenWall.renderOrder = 9;
         world.add(rightGreenWall);
       } else {
-        const leftFix = new THREE.Mesh(new THREE.PlaneGeometry(12.6, 8.2), getTunnelForestMat());
+        const leftFix = new THREE.Mesh(new THREE.PlaneGeometry(12.6, 8.2), getTunnelForestDarkMat());
         leftFix.position.set(-17.8, 5.6, zStart + 1.8);
         leftFix.rotation.y = Math.PI*0.60;
         leftFix.renderOrder = 4;
         world.add(leftFix);
-        const leftFixLow = new THREE.Mesh(new THREE.PlaneGeometry(9.4, 5.6), getTunnelForestMat());
+        const leftFixLow = new THREE.Mesh(new THREE.PlaneGeometry(9.4, 5.6), getTunnelForestDarkMat());
         leftFixLow.position.set(-13.7, 4.2, zStart + 1.1);
         leftFixLow.rotation.y = Math.PI*0.50;
         leftFixLow.renderOrder = 8;
         world.add(leftFixLow);
-        const leftGreenWall = new THREE.Mesh(new THREE.PlaneGeometry(8.4, 4.8), getTunnelForestMat());
-        leftGreenWall.position.set(-10.8, 3.8, zStart + 1.5);
+        const leftGreenWall = new THREE.Mesh(new THREE.PlaneGeometry(10.6, 6.4), getTunnelForestDarkMat());
+        leftGreenWall.position.set(-11.4, 4.0, zStart + 1.6);
         leftGreenWall.rotation.y = Math.PI*0.32;
         leftGreenWall.renderOrder = 9;
         world.add(leftGreenWall);
       }
-      const sidePortalCover = new THREE.Mesh(new THREE.PlaneGeometry(10.6, 6.6), getTunnelForestMat());
-      sidePortalCover.position.set(side*18.8, 4.7, zStart + 2.2);
+      const sidePortalCover = new THREE.Mesh(new THREE.PlaneGeometry(side>0 ? 14.8 : 14.8, side>0 ? 9.2 : 9.2), entranceSideForestMat);
+      sidePortalCover.position.set(side>0 ? 20.2 : -20.2, side>0 ? 5.0 : 5.0, zStart + 2.2);
       sidePortalCover.rotation.y = side>0 ? -Math.PI*0.42 : Math.PI*0.42;
       sidePortalCover.renderOrder = 10;
       world.add(sidePortalCover);
@@ -5587,23 +5608,23 @@
     exitHill.rotation.y = 0;
     exitHill.renderOrder = 1;
     world.add(exitHill);
-    const exitForest = new THREE.Mesh(new THREE.PlaneGeometry(72.0, 17.2), getTunnelForestMat());
+    const exitForest = new THREE.Mesh(new THREE.PlaneGeometry(76.0, 18.0), getTunnelForestDarkMat());
     exitForest.position.set(0,13.3,zStart - length - 9.0);
     exitForest.rotation.y = 0;
     exitForest.renderOrder = 2;
     world.add(exitForest);
-    const exitPortalTopForest = new THREE.Mesh(new THREE.PlaneGeometry(44.0, 10.8), getTunnelForestMat());
+    const exitPortalTopForest = new THREE.Mesh(new THREE.PlaneGeometry(48.0, 12.0), getTunnelForestDarkMat());
     exitPortalTopForest.position.set(0,10.2,zStart - length - 1.2);
     exitPortalTopForest.rotation.y = 0;
     exitPortalTopForest.renderOrder = 4;
     world.add(exitPortalTopForest);
-    const exitForestWide = new THREE.Mesh(new THREE.PlaneGeometry(108.0, 19.2), getTunnelForestMat());
+    const exitForestWide = new THREE.Mesh(new THREE.PlaneGeometry(118.0, 21.0), getTunnelForestDarkMat(.96));
     exitForestWide.position.set(0,13.7,zStart - length - 12.8);
     exitForestWide.rotation.y = 0;
     exitForestWide.renderOrder = 0;
     world.add(exitForestWide);
     [-1,1].forEach(side=>{
-      const forestSide = new THREE.Mesh(new THREE.PlaneGeometry(24.0, 13.6), getTunnelForestMat());
+      const forestSide = new THREE.Mesh(new THREE.PlaneGeometry(28.0, 15.2), getTunnelForestDarkMat());
       forestSide.position.set(side*26.8, 10.9, zStart - length - 8.2);
       forestSide.rotation.y = side>0 ? Math.PI/2 : -Math.PI/2;
       forestSide.renderOrder = 1;
@@ -5642,7 +5663,7 @@
       portalShoulder.position.set(side*15.4,.10,zStart - length - 3.4);
       portalShoulder.rotation.z = side*.06;
       world.add(portalShoulder);
-      const portalCurtain = new THREE.Mesh(new THREE.PlaneGeometry(12.0, 8.4), getTunnelForestMat());
+      const portalCurtain = new THREE.Mesh(new THREE.PlaneGeometry(13.8, 9.4), getTunnelForestDarkMat());
       portalCurtain.position.set(side*20.6, 6.4, zStart - length - 4.8);
       portalCurtain.rotation.y = side>0 ? Math.PI*0.62 : -Math.PI*0.62;
       portalCurtain.renderOrder = 4;
@@ -5654,7 +5675,7 @@
       const sealGround = new THREE.Mesh(new THREE.BoxGeometry(8.2,.10,8.4), vergeMat);
       sealGround.position.set(side*19.2, .08, zStart - length - 5.0);
       world.add(sealGround);
-      const sideSeal = new THREE.Mesh(new THREE.PlaneGeometry(13.6, 8.0), getTunnelForestMat());
+      const sideSeal = new THREE.Mesh(new THREE.PlaneGeometry(15.8, 9.0), getTunnelForestDarkMat());
       sideSeal.position.set(side*22.8, 6.0, zStart - length - 4.2);
       sideSeal.rotation.y = side>0 ? Math.PI*0.72 : -Math.PI*0.72;
       sideSeal.renderOrder = 3;
@@ -5704,23 +5725,23 @@
         rightGreenWall.renderOrder = 9;
         world.add(rightGreenWall);
       } else {
-        const leftFix = new THREE.Mesh(new THREE.PlaneGeometry(12.6, 8.2), getTunnelForestMat());
+        const leftFix = new THREE.Mesh(new THREE.PlaneGeometry(12.6, 8.2), getTunnelForestDarkMat());
         leftFix.position.set(-17.8, 5.6, zStart - length - 1.8);
         leftFix.rotation.y = -Math.PI*0.60;
         leftFix.renderOrder = 4;
         world.add(leftFix);
-        const leftFixLow = new THREE.Mesh(new THREE.PlaneGeometry(9.4, 5.6), getTunnelForestMat());
+        const leftFixLow = new THREE.Mesh(new THREE.PlaneGeometry(9.4, 5.6), getTunnelForestDarkMat());
         leftFixLow.position.set(-13.7, 4.2, zStart - length - 1.1);
         leftFixLow.rotation.y = -Math.PI*0.50;
         leftFixLow.renderOrder = 8;
         world.add(leftFixLow);
-        const leftGreenWall = new THREE.Mesh(new THREE.PlaneGeometry(8.4, 4.8), getTunnelForestMat());
-        leftGreenWall.position.set(-10.8, 3.8, zStart - length - 1.5);
+        const leftGreenWall = new THREE.Mesh(new THREE.PlaneGeometry(10.6, 6.4), getTunnelForestDarkMat());
+        leftGreenWall.position.set(-11.4, 4.0, zStart - length - 1.6);
         leftGreenWall.rotation.y = -Math.PI*0.32;
         leftGreenWall.renderOrder = 9;
         world.add(leftGreenWall);
       }
-      const sidePortalCover = new THREE.Mesh(new THREE.PlaneGeometry(10.6, 6.6), getTunnelForestMat());
+      const sidePortalCover = new THREE.Mesh(new THREE.PlaneGeometry(12.4, 7.8), getTunnelForestDarkMat());
       sidePortalCover.position.set(side*18.8, 4.7, zStart - length - 2.2);
       sidePortalCover.rotation.y = side>0 ? Math.PI*0.42 : -Math.PI*0.42;
       sidePortalCover.renderOrder = 10;
@@ -5943,7 +5964,7 @@
   const brakeBar = document.getElementById('brakeBar');
   const leverSlot = document.getElementById('leverSlot');
   const leverHandle = document.getElementById('leverHandle');
-  const tripMeterTxt = document.getElementById('tripMeterTxt');
+  const tripMeterTxt2 = document.getElementById('tripMeterTxt2');
 
   function buildTicks(containerId, max, nums){
     const c=document.getElementById(containerId);
@@ -5996,7 +6017,7 @@
       notice.style.color = '#ff333b';
       notice.textContent = `停止位置を ${over}m 超過しています`;
     }
-    tripMeterTxt.textContent = (routeS/1000).toFixed(2) + ' km';
+    if(tripMeterTxt2) tripMeterTxt2.textContent = ((routeS*2)/1000).toFixed(2) + ' km';
     doorTxt.textContent = doorClosed?'閉':'開';
     doorTxt.style.color = doorClosed?'#17ff49':'#ff4a4a';
     [...doorBlocks.children].forEach(el=>{
