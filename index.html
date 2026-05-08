@@ -1812,6 +1812,206 @@
     return ruralHouseMats;
   }
 
+
+  // 田舎の家をさらに軽量化：家1棟を「箱＋細かい窓」ではなく、外観を描き込んだ板テクスチャで表示する。
+  // 農家・蔵・町家・納屋・駅舎をCanvasTexture化し、1棟あたりのMesh数を大きく削減する。
+  let ruralHouseBillboardMats = null;
+
+  function makeRuralHouseBillboardTexture(kind='farmhouse'){
+    const c = document.createElement('canvas');
+    c.width = 768; c.height = 512;
+    const g = c.getContext('2d');
+    g.clearRect(0,0,c.width,c.height);
+
+    let seed = 1234567;
+    for(let i=0;i<kind.length;i++) seed = Math.imul(seed ^ kind.charCodeAt(i), 16777619);
+    const rnd = () => {
+      seed += 0x6D2B79F5;
+      let t = seed;
+      t = Math.imul(t ^ (t >>> 15), t | 1);
+      t ^= t + Math.imul(t ^ (t >>> 7), t | 61);
+      return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+    };
+    const poly = (pts, fill, stroke='rgba(0,0,0,.18)', lw=3) => {
+      g.beginPath();
+      pts.forEach(([x,y],i)=> i ? g.lineTo(x,y) : g.moveTo(x,y));
+      g.closePath(); g.fillStyle = fill; g.fill();
+      if(stroke){ g.strokeStyle = stroke; g.lineWidth = lw; g.stroke(); }
+    };
+    const rect = (x,y,w,h,fill,stroke=null,lw=2) => {
+      g.fillStyle = fill; g.fillRect(x,y,w,h);
+      if(stroke){ g.strokeStyle=stroke; g.lineWidth=lw; g.strokeRect(x+.5,y+.5,w-1,h-1); }
+    };
+    function addWoodGrain(x,y,w,h,a=.10){
+      for(let i=0;i<48;i++){
+        const xx=x+rnd()*w, yy=y+rnd()*h;
+        g.fillStyle=`rgba(75,50,30,${a*(.45+rnd()*.8)})`;
+        g.fillRect(xx,yy,1+rnd()*2,8+rnd()*24);
+      }
+    }
+    function addShoji(x,y,w,h){
+      rect(x,y,w,h,'#f3efe6','#766a58',3);
+      g.fillStyle='rgba(255,255,255,.32)'; g.fillRect(x+5,y+5,w*.22,h-10);
+      g.fillStyle='#766a58';
+      for(let i=1;i<4;i++) g.fillRect(x+i*w/4,y+4,2,h-8);
+      for(let i=1;i<3;i++) g.fillRect(x+4,y+i*h/3,w-8,2);
+    }
+    function addRoofTiles(x,y,w,h,base='#343333'){
+      const grad = g.createLinearGradient(0,y,0,y+h);
+      grad.addColorStop(0,'#56504a'); grad.addColorStop(.5,base); grad.addColorStop(1,'#171818');
+      g.fillStyle = grad; g.fillRect(x,y,w,h);
+      for(let yy=y+8; yy<y+h; yy+=13){
+        g.strokeStyle='rgba(255,255,255,.10)'; g.lineWidth=1.2;
+        g.beginPath(); g.moveTo(x,yy); g.lineTo(x+w,yy); g.stroke();
+        g.strokeStyle='rgba(0,0,0,.25)';
+        g.beginPath(); g.moveTo(x,yy+5); g.lineTo(x+w,yy+5); g.stroke();
+      }
+      for(let xx=x+8; xx<x+w; xx+=19){
+        g.strokeStyle='rgba(255,255,255,.06)';
+        g.beginPath(); g.moveTo(xx,y+4); g.lineTo(xx+8,y+h-4); g.stroke();
+      }
+    }
+    function addHouseShadow(){
+      const sh = g.createRadialGradient(384,432,20,384,432,335);
+      sh.addColorStop(0,'rgba(0,0,0,.28)'); sh.addColorStop(1,'rgba(0,0,0,0)');
+      g.fillStyle = sh; g.fillRect(82,392,604,70);
+    }
+
+    addHouseShadow();
+    if(kind === 'kura'){
+      // 白壁の蔵。黒瓦・観音扉・なまこ壁を全部テクスチャへ焼き込み。
+      poly([[132,198],[636,198],[688,298],[86,298]], '#2c2b2a', 'rgba(0,0,0,.35)', 4);
+      addRoofTiles(104,184,560,92,'#2b2b2b');
+      rect(150,260,468,158,'#ddd8cc','#7e7668',4);
+      for(let x=178;x<590;x+=68){
+        g.fillStyle='#676056'; g.fillRect(x,262,10,156);
+        g.fillStyle='rgba(255,255,255,.14)'; g.fillRect(x+2,262,2,156);
+      }
+      rect(300,286,152,120,'#5b4a3c','#3c3028',4);
+      g.fillStyle='rgba(255,255,255,.16)'; g.fillRect(314,296,26,96);
+      for(let y=328;y<410;y+=22){ g.strokeStyle='rgba(70,64,56,.28)'; g.beginPath(); g.moveTo(150,y); g.lineTo(618,y); g.stroke(); }
+      rect(166,335,88,58,'#eee9df','#827666',3); addShoji(514,332,70,56);
+    } else if(kind === 'machiya'){
+      // 町家：細長い格子と二階窓。駅前・集落に混ぜる。
+      addRoofTiles(112,152,548,84,'#302f2d');
+      poly([[116,176],[652,176],[700,236],[62,236]], 'rgba(26,25,24,.82)', 'rgba(0,0,0,.28)', 3);
+      rect(126,220,512,194,'#c8b8a0','#6f604f',3);
+      rect(150,246,470,62,'#6b4f38',null);
+      for(let x=164;x<604;x+=22){ g.fillStyle=x%44===0?'#4a3528':'#76563c'; g.fillRect(x,248,10,158); }
+      addShoji(202,318,110,76); addShoji(454,318,106,76);
+      rect(332,314,84,96,'#483323','#2c2119',3);
+      addWoodGrain(126,220,512,194,.09);
+    } else if(kind === 'naya'){
+      // 納屋・農機具小屋。小さめで、田んぼの脇に置く用途。
+      addRoofTiles(142,178,496,80,'#3b3734');
+      poly([[146,202],[636,202],[690,260],[92,260]], '#343331', 'rgba(0,0,0,.32)', 3);
+      rect(170,250,420,156,'#96745a','#5e4735',3);
+      addWoodGrain(170,250,420,156,.20);
+      rect(260,286,168,118,'#624934','#34261b',4);
+      for(let x=276;x<416;x+=26){ g.fillStyle='rgba(255,255,255,.08)'; g.fillRect(x,292,3,100); }
+      rect(456,290,76,72,'#e9e2d2','#776958',3);
+      g.fillStyle='rgba(70,48,30,.32)'; g.fillRect(178,390,400,16);
+    } else if(kind === 'station'){
+      // 田舎駅舎。家と同じ軽量板だが、看板と庇を描き込む。
+      addRoofTiles(108,150,552,86,'#303033');
+      poly([[108,182],[662,182],[710,242],[58,242]], '#2f2f2f','rgba(0,0,0,.35)',3);
+      rect(128,230,510,180,'#d9d2c2','#756d61',3);
+      rect(282,252,200,40,'#f4f0df','#918774',3);
+      g.fillStyle='#4e4a43'; g.font='bold 26px sans-serif'; g.textAlign='center'; g.fillText('山里駅',382,281);
+      addShoji(162,314,118,78); addShoji(500,314,96,78);
+      rect(322,310,112,96,'#5b4532','#302219',4);
+      rect(206,292,360,18,'#41392f');
+    } else if(kind === 'modern'){
+      // 現代寄りの田舎住宅。必要最小限の箱感だけ残す。
+      addRoofTiles(126,160,520,76,'#4a4643');
+      poly([[126,184],[646,184],[686,238],[86,238]], '#474441','rgba(0,0,0,.30)',3);
+      rect(156,234,438,180,'#dfd8ca','#867b6c',3);
+      rect(176,260,120,70,'#edf1ef','#7c837e',3);
+      rect(446,260,104,66,'#eef1ee','#7c837e',3);
+      rect(324,302,92,108,'#664832','#37261d',4);
+      g.fillStyle='rgba(100,80,60,.16)'; g.fillRect(156,348,438,44);
+      addWoodGrain(156,234,438,180,.05);
+    } else {
+      // 農家・古民家。大きい瓦屋根、障子、木の柱、縁側をテクスチャにまとめる。
+      addRoofTiles(86,132,596,100,'#2b2b29');
+      poly([[92,168],[678,168],[736,250],[34,250]], '#292929', 'rgba(0,0,0,.35)', 4);
+      rect(118,240,520,170,'#ded5c4','#6f6253',3);
+      // 太い柱
+      for(let x=150;x<622;x+=94){ rect(x,238,18,172,'#684b35'); }
+      rect(118,318,520,48,'#6b4c35');
+      for(let x=134;x<620;x+=24){ g.fillStyle = x%48===0 ? '#8b6848' : '#5b402e'; g.fillRect(x,322,13,42); }
+      addShoji(190,260,120,72); addShoji(432,258,118,76);
+      rect(326,276,82,130,'#513827','#2d2017',4);
+      rect(146,390,444,18,'#5d4330');
+      addWoodGrain(118,240,520,170,.08);
+    }
+
+    // ふちの空気遠近・汚れ。透明部分には色を乗せない。
+    g.save();
+    g.globalCompositeOperation = 'source-atop';
+    const shade = g.createLinearGradient(0,0,c.width,c.height);
+    shade.addColorStop(0,'rgba(255,255,255,.10)');
+    shade.addColorStop(.55,'rgba(255,255,255,0)');
+    shade.addColorStop(1,'rgba(0,0,0,.18)');
+    g.fillStyle = shade; g.fillRect(0,0,c.width,c.height);
+    for(let i=0;i<36;i++){
+      const x = 90 + rnd()*590, y = 210 + rnd()*190;
+      g.fillStyle='rgba(70,58,42,.055)'; g.fillRect(x,y,1+rnd()*2,12+rnd()*38);
+    }
+    g.restore();
+
+    const tex = new THREE.CanvasTexture(c);
+    tex.anisotropy = Math.min(4, renderer.capabilities.getMaxAnisotropy ? renderer.capabilities.getMaxAnisotropy() : 1);
+    tex.minFilter = THREE.LinearMipmapLinearFilter;
+    tex.magFilter = THREE.LinearFilter;
+    tex.generateMipmaps = true;
+    tex.userData.sharedTexture = true;
+    tex.needsUpdate = true;
+    return tex;
+  }
+
+  function getRuralHouseBillboardMats(){
+    if(ruralHouseBillboardMats) return ruralHouseBillboardMats;
+    ruralHouseBillboardMats = {
+      farmhouse: new THREE.MeshBasicMaterial({map:makeRuralHouseBillboardTexture('farmhouse'), transparent:true, alphaTest:.04, side:THREE.DoubleSide, depthWrite:false, fog:true}),
+      kura: new THREE.MeshBasicMaterial({map:makeRuralHouseBillboardTexture('kura'), transparent:true, alphaTest:.04, side:THREE.DoubleSide, depthWrite:false, fog:true}),
+      machiya: new THREE.MeshBasicMaterial({map:makeRuralHouseBillboardTexture('machiya'), transparent:true, alphaTest:.04, side:THREE.DoubleSide, depthWrite:false, fog:true}),
+      naya: new THREE.MeshBasicMaterial({map:makeRuralHouseBillboardTexture('naya'), transparent:true, alphaTest:.04, side:THREE.DoubleSide, depthWrite:false, fog:true}),
+      station: new THREE.MeshBasicMaterial({map:makeRuralHouseBillboardTexture('station'), transparent:true, alphaTest:.04, side:THREE.DoubleSide, depthWrite:false, fog:true}),
+      modern: new THREE.MeshBasicMaterial({map:makeRuralHouseBillboardTexture('modern'), transparent:true, alphaTest:.04, side:THREE.DoubleSide, depthWrite:false, fog:true})
+    };
+    Object.values(ruralHouseBillboardMats).forEach(markSharedMaterial);
+    return ruralHouseBillboardMats;
+  }
+
+  function addTexturedRuralHouse(side, z, scale=1, kind='farmhouse'){
+    const mats = getRuralHouseBillboardMats();
+    const baseX = side * (8.6 + Math.random()*8.2);
+    const baseZ = z + (Math.random()-.5)*19;
+    const kindScale = kind === 'naya' ? .72 : kind === 'kura' ? .88 : kind === 'station' ? 1.05 : kind === 'machiya' ? .94 : 1.0;
+    const w = (6.4 + Math.random()*2.7) * scale * kindScale;
+    const h = (4.0 + Math.random()*.7) * scale * kindScale;
+    const matKey = mats[kind] ? kind : 'farmhouse';
+    const house = new THREE.Mesh(new THREE.PlaneGeometry(w,h), mats[matKey]);
+    house.position.set(baseX, h*.50 + .06, baseZ);
+    // 線路方向に対して少しだけ振る。板1枚でも同じ向きの連続に見えにくくする。
+    house.rotation.y = side * (.03 + Math.random()*.10);
+    house.renderOrder = 2;
+    world.add(house);
+
+    // 地面との接地影・低い塀だけ3Dの薄い箱で追加。家本体は1メッシュのまま。
+    const mats3d = getRuralHouseMats();
+    const shadow = new THREE.Mesh(new THREE.BoxGeometry(w*.92,.025,.70), new THREE.MeshBasicMaterial({color:0x1d2117, transparent:true, opacity:.28}));
+    shadow.position.set(baseX,.022,baseZ-.12); shadow.rotation.y = house.rotation.y; world.add(shadow);
+    if(kind !== 'naya' && Math.random()<.58){
+      const wall = new THREE.Mesh(new THREE.BoxGeometry(w*.72,.30,.10), Math.random()<.45 ? mats3d.hedge : mats3d.stone);
+      wall.position.set(baseX - side*w*.04,.16,baseZ-.58); wall.rotation.y = house.rotation.y; world.add(wall);
+    }
+    if(Math.random()<.68 && kind !== 'station'){
+      addRealisticTree(baseX + side*(w*.58+Math.random()*1.1), baseZ + (Math.random()-.5)*2.8, .92+Math.random()*.26, side, 'rural');
+    }
+  }
+
   function addOldRuralHouse(side, z, scale=1){
     const mats = getRuralHouseMats();
     const baseX = side * (8.8 + Math.random()*7.6);
@@ -2021,14 +2221,19 @@
 
   function addBuilding(side, z, zone){
     if(zone==='rural' || zone==='mountain'){
-      // 田舎は箱型ビルではなく、昔風の民家＋畑＋木の多い景色にする
+      // 田舎は家本体を板テクスチャ化。細かい窓・柱・瓦・蔵扉はCanvasTextureへ焼き込み、Mesh数を削減。
       const roll = Math.random();
-      if(roll < .42) addOldRuralHouse(side,z, zone==='mountain' ? .88 : 1.0);
-      else if(roll < .60) addModernRuralHouse(side,z, zone==='mountain' ? .84 : .96);
-      else if(roll < .72) addRuralStationBuilding(side,z, zone==='mountain' ? .82 : .92);
+      const sc = zone==='mountain' ? .82 : .96;
+      if(roll < .30) addTexturedRuralHouse(side,z,sc,'farmhouse');
+      else if(roll < .50) addTexturedRuralHouse(side,z,sc,'kura');
+      else if(roll < .66) addTexturedRuralHouse(side,z,sc,'machiya');
+      else if(roll < .80) addTexturedRuralHouse(side,z,sc*.86,'naya');
+      else if(roll < .91) addTexturedRuralHouse(side,z,sc,'modern');
+      else addTexturedRuralHouse(side,z,sc*.96,'station');
       if(Math.random()<.94) addRiceField(side,z, zone==='mountain');
-      addRuralTreeMass(side,z, zone==='mountain' ? 7 : 5);
-      if(Math.random()<.65) addRuralUtilityPole(side,z+(Math.random()-.5)*20);
+      // 家を軽くした分、木は従来より少し控えめにして停止リスクも下げる。
+      addRuralTreeMass(side,z, zone==='mountain' ? 5 : 4);
+      if(Math.random()<.58) addRuralUtilityPole(side,z+(Math.random()-.5)*20);
       return;
     }
     const isTown = zone==='town' || zone==='station' || zone==='residential';
