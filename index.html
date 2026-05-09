@@ -3211,11 +3211,7 @@
       const box = new THREE.Mesh(new THREE.BoxGeometry(.45,.65,.32), new THREE.MeshStandardMaterial({color:0xd8d8d0,roughness:.75}));
       box.position.set(side*(5.7+Math.random()*.5),.35,z-8+Math.random()*16); world.add(box);
     }
-    if(!inRuralTunnel && !inCityTunnel && Math.random()<.55){
-      const side = Math.random()<.5?-1:1;
-      const sign = new THREE.Mesh(new THREE.BoxGeometry(.32,.42,.04), new THREE.MeshBasicMaterial({color:0xffffff}));
-      sign.position.set(side*3.15,.95,z-10+Math.random()*20); world.add(sign);
-    }
+    // 線路脇の白い小看板は視界のノイズになるため削除
 
     if(zone==='rural' || zone==='mountain'){
       if(inRuralTunnel) return;
@@ -3785,23 +3781,23 @@
     const map = {
       // 緑＝山手風
       green: {
-        line:'#9bcd44', line2:'#6ea732', body:'#8f9599', body2:'#5a6065', front:'#a6cf57', dark:'#121518', family:'jr-modern'
+        line:'#52b31a', line2:'#267011', body:'#717a80', body2:'#32393f', front:'#61c61e', dark:'#121518', family:'jr-modern'
       },
       // 水色＝京浜東北風
       blue: {
-        line:'#43b8e8', line2:'#2d91c3', body:'#90969a', body2:'#5e656a', front:'#4bc0ee', dark:'#121518', family:'jr-modern'
+        line:'#009cde', line2:'#006f9f', body:'#717980', body2:'#323b43', front:'#00a9ee', dark:'#121518', family:'jr-modern'
       },
       // 黄＝南武・総武風（黄色帯のJR近郊形イメージ）
       yellow:{
-        line:'#f3cf2f', line2:'#d3a21b', body:'#90969a', body2:'#5e656a', front:'#efca2d', dark:'#121518', family:'jr-modern'
+        line:'#d7af10', line2:'#9a7603', body:'#717a80', body2:'#343c43', front:'#e0b915', dark:'#121518', family:'jr-modern'
       },
       // 赤＝京急風
       red:   {
-        line:'#c74949', line2:'#f1e5c8', body:'#cc5656', body2:'#8f2f2f', front:'#cc5656', dark:'#1b1717', family:'keikyu'
+        line:'#d11a2e', line2:'#f3e6cd', body:'#c51a2b', body2:'#6a1017', front:'#de2034', dark:'#1b1717', family:'keikyu'
       },
       // 旧pink指定は赤系に寄せて互換維持
       pink:  {
-        line:'#c74949', line2:'#f1e5c8', body:'#cc5656', body2:'#8f2f2f', front:'#cc5656', dark:'#1b1717', family:'keikyu'
+        line:'#d11a2e', line2:'#f3e6cd', body:'#c51a2b', body2:'#6a1017', front:'#de2034', dark:'#1b1717', family:'keikyu'
       }
     };
     return map[key] || map.green;
@@ -3817,35 +3813,35 @@
     // 車体色をより濃くし、ビルに近い落ち着いた濃灰色＋濃い陰影へ
     if(isKeikyu){
       const bodyGrad = g.createLinearGradient(0,0,0,H);
-      bodyGrad.addColorStop(0.00, '#f09288');
-      bodyGrad.addColorStop(0.10, '#dc5b59');
-      bodyGrad.addColorStop(0.40, '#bf403f');
-      bodyGrad.addColorStop(0.76, '#932c2c');
-      bodyGrad.addColorStop(1.00, '#611d1d');
+      bodyGrad.addColorStop(0.00, '#ff8d84');
+      bodyGrad.addColorStop(0.08, '#d93e3c');
+      bodyGrad.addColorStop(0.34, '#b11f2a');
+      bodyGrad.addColorStop(0.74, '#70121d');
+      bodyGrad.addColorStop(1.00, '#3a0c10');
       g.fillStyle = bodyGrad; g.fillRect(0,0,W,H);
-      g.fillStyle = 'rgba(255,255,255,.24)'; g.fillRect(0,0,W,14);
-      g.fillStyle = 'rgba(255,255,255,.12)'; g.fillRect(0,28,W,8);
-      g.fillStyle = '#f4ead5'; g.fillRect(0,164,W,40);
-      g.fillStyle = '#ede0bb'; g.fillRect(0,204,W,44);
-      g.fillStyle = 'rgba(0,0,0,.28)'; g.fillRect(0,H-64,W,26);
-      g.fillStyle = 'rgba(0,0,0,.22)'; g.fillRect(0,H-30,W,30);
+      g.fillStyle = 'rgba(255,255,255,.30)'; g.fillRect(0,0,W,16);
+      g.fillStyle = 'rgba(255,255,255,.14)'; g.fillRect(0,28,W,9);
+      g.fillStyle = '#fff1dc'; g.fillRect(0,162,W,44);
+      g.fillStyle = '#ead8ad'; g.fillRect(0,206,W,48);
+      g.fillStyle = 'rgba(0,0,0,.36)'; g.fillRect(0,H-68,W,28);
+      g.fillStyle = 'rgba(0,0,0,.28)'; g.fillRect(0,H-32,W,32);
     } else {
       const bodyGrad = g.createLinearGradient(0,0,0,H);
-      bodyGrad.addColorStop(0.00, '#d0d6da');
-      bodyGrad.addColorStop(0.08, '#b0b8be');
-      bodyGrad.addColorStop(0.28, '#7d868e');
-      bodyGrad.addColorStop(0.52, '#586169');
-      bodyGrad.addColorStop(0.78, '#3d454c');
-      bodyGrad.addColorStop(1.00, '#2b3137');
+      bodyGrad.addColorStop(0.00, '#f4f7f8');
+      bodyGrad.addColorStop(0.06, '#cbd4d8');
+      bodyGrad.addColorStop(0.24, '#7f8b95');
+      bodyGrad.addColorStop(0.50, '#44515b');
+      bodyGrad.addColorStop(0.78, '#242c33');
+      bodyGrad.addColorStop(1.00, '#14191d');
       g.fillStyle = bodyGrad; g.fillRect(0,0,W,H);
-      g.fillStyle = 'rgba(255,255,255,.24)'; g.fillRect(0,0,W,16);
-      g.fillStyle = 'rgba(255,255,255,.10)'; g.fillRect(0,30,W,8);
-      g.fillStyle = 'rgba(0,0,0,.30)'; g.fillRect(0,H-72,W,24);
-      g.fillStyle = 'rgba(0,0,0,.22)'; g.fillRect(0,H-32,W,32);
-      g.fillStyle = pal.line;  g.fillRect(0,116,W,28);
-      g.fillStyle = 'rgba(255,255,255,.14)'; g.fillRect(0,114,W,3);
-      g.fillStyle = 'rgba(0,0,0,.18)'; g.fillRect(0,144,W,3);
-      g.fillStyle = pal.line2; g.fillRect(0,226,W,8);
+      g.fillStyle = 'rgba(255,255,255,.30)'; g.fillRect(0,0,W,18);
+      g.fillStyle = 'rgba(255,255,255,.14)'; g.fillRect(0,32,W,8);
+      g.fillStyle = 'rgba(0,0,0,.36)'; g.fillRect(0,H-76,W,26);
+      g.fillStyle = 'rgba(0,0,0,.26)'; g.fillRect(0,H-34,W,34);
+      g.fillStyle = pal.line;  g.fillRect(0,112,W,32);
+      g.fillStyle = 'rgba(255,255,255,.22)'; g.fillRect(0,110,W,4);
+      g.fillStyle = 'rgba(0,0,0,.24)'; g.fillRect(0,144,W,4);
+      g.fillStyle = pal.line2; g.fillRect(0,226,W,10);
     }
 
     const cars = 4;
@@ -3859,11 +3855,11 @@
       doorXs.forEach(dx0 => {
         const dx = x0 + dx0;
         const doorGrad = g.createLinearGradient(dx,0,dx+86,0);
-        doorGrad.addColorStop(0,'rgba(255,255,255,.12)');
-        doorGrad.addColorStop(.26,'rgba(140,150,156,.06)');
-        doorGrad.addColorStop(.50,'rgba(14,18,22,.18)');
-        doorGrad.addColorStop(.74,'rgba(120,128,134,.04)');
-        doorGrad.addColorStop(1,'rgba(255,255,255,.09)');
+        doorGrad.addColorStop(0,'rgba(255,255,255,.18)');
+        doorGrad.addColorStop(.22,'rgba(150,160,168,.08)');
+        doorGrad.addColorStop(.50,'rgba(10,14,18,.28)');
+        doorGrad.addColorStop(.78,'rgba(120,128,134,.06)');
+        doorGrad.addColorStop(1,'rgba(255,255,255,.14)');
         g.fillStyle = doorGrad; g.fillRect(dx,54,86,270);
         g.strokeStyle = isKeikyu ? 'rgba(250,244,232,.34)' : 'rgba(8,10,12,.64)';
         g.lineWidth = 3.2; g.strokeRect(dx+1.5,55.5,83,266);
@@ -3871,8 +3867,8 @@
 
         // ドア窓はほぼ真っ黒
         g.fillStyle = '#030507'; g.fillRect(dx+18,88,50,126);
-        g.fillStyle = 'rgba(255,255,255,.12)'; g.fillRect(dx+22,94,5,114);
-        g.fillStyle = 'rgba(255,255,255,.04)'; g.fillRect(dx+34,96,18,4);
+        g.fillStyle = 'rgba(255,255,255,.24)'; g.fillRect(dx+22,90,7,122);
+        g.fillStyle = 'rgba(255,255,255,.12)'; g.fillRect(dx+34,95,22,6);
 
         g.fillStyle = 'rgba(255,255,255,.96)';
         g.fillRect(dx+24,236,8,48); g.fillRect(dx+54,236,8,48);
@@ -3884,9 +3880,9 @@
       const winXs = [24, 238, 454];
       winXs.forEach(wx0 => {
         const x = x0 + wx0;
-        g.fillStyle = '#020406'; g.fillRect(x,82,148,78);
-        g.fillStyle = 'rgba(255,255,255,.12)'; g.fillRect(x+8,88,9,64);
-        g.fillStyle = 'rgba(255,255,255,.03)'; g.fillRect(x+28,90,102,4);
+        g.fillStyle = '#010304'; g.fillRect(x,82,148,78);
+        g.fillStyle = 'rgba(255,255,255,.24)'; g.fillRect(x+8,84,11,68);
+        g.fillStyle = 'rgba(255,255,255,.12)'; g.fillRect(x+28,89,106,6);
         g.strokeStyle = isKeikyu ? 'rgba(246,240,230,.24)' : 'rgba(2,4,6,.68)';
         g.lineWidth = 3; g.strokeRect(x+1.5,83.5,145,75);
       });
@@ -3907,7 +3903,7 @@
     }
     for(let i=0;i<1600;i++){
       const x = Math.random()*W, y = Math.random()*H;
-      const a = Math.random()*0.045;
+      const a = Math.random()*0.06;
       g.fillStyle = `rgba(255,255,255,${a})`;
       g.fillRect(x,y,1,1);
     }
@@ -3925,130 +3921,128 @@
 
   function makeTrainFaceTexture(key='green'){
     const pal = trainPalette(key);
-    const isKeikyu = pal.family === 'keikyu';
+    const shapeType = getTrainShapeType(key);
     const W = 720, H = 720;
     const c = document.createElement('canvas'); c.width=W; c.height=H;
     const g = c.getContext('2d');
 
-    if(isKeikyu){
+    if(shapeType === 'keikyu'){
       const shell = g.createLinearGradient(0,0,0,H);
-      shell.addColorStop(0,'#ec877f');
-      shell.addColorStop(.18,'#d45451');
-      shell.addColorStop(.62,'#ad3535');
-      shell.addColorStop(1,'#731f1f');
-      g.fillStyle = shell; g.fillRect(0,0,W,H);
-      g.fillStyle = '#f4ead5'; g.fillRect(0,292,W,116);
-      g.fillStyle = '#efeee9'; g.fillRect(0,H-160,W,160);
-      // 前面窓をより大きく、外枠幅を縮小
-      g.fillStyle = '#030507'; g.fillRect(108,74,504,278);
-      g.strokeStyle = 'rgba(246,240,228,.84)'; g.lineWidth = 6; g.strokeRect(108,74,504,278);
-      g.fillStyle = 'rgba(255,255,255,.16)'; g.fillRect(132,92,16,238);
-      g.fillStyle = '#101316'; g.fillRect(308,86,104,250);
-      g.fillStyle = '#111418'; g.fillRect(126,98,116,78); g.fillRect(478,98,116,78);
-      g.fillStyle = '#0f1316'; g.fillRect(136,110,92,48); g.fillRect(492,110,92,48);
-      g.fillStyle = 'rgba(255,244,204,.98)';
-      g.beginPath(); g.arc(144,514,40,0,Math.PI*2); g.fill();
-      g.beginPath(); g.arc(576,514,40,0,Math.PI*2); g.fill();
-      g.fillStyle = '#4a5259'; g.fillRect(238,502,244,144);
-      g.fillStyle = '#1e252a'; g.fillRect(292,534,136,102);
-      g.strokeStyle = 'rgba(26,30,34,.95)'; g.lineWidth = 5;
-      g.beginPath(); g.moveTo(360,344); g.lineTo(360,486); g.stroke();
-      g.beginPath(); g.moveTo(228,368); g.lineTo(330,340); g.stroke();
-      g.beginPath(); g.moveTo(492,368); g.lineTo(390,340); g.stroke();
-      g.fillStyle = '#f7efdf'; g.fillRect(324,552,72,16);
-    } else {
-      // JR系：窓を大きく、外枠を細く、車体灰色は濃く
-      const shell = g.createLinearGradient(0,0,0,H);
-      shell.addColorStop(0,'#c8cfd3');
-      shell.addColorStop(.18,'#9ea7ac');
-      shell.addColorStop(.55,'#69737b');
-      shell.addColorStop(1,'#42484e');
+      shell.addColorStop(0,'#f05f58');
+      shell.addColorStop(.18,'#cf3136');
+      shell.addColorStop(.62,'#a11a24');
+      shell.addColorStop(1,'#6d121b');
       g.fillStyle = shell; g.fillRect(0,0,W,H);
 
-      // 前面の薄い白いマスク部分（細め）
+      g.fillStyle = '#efe4c8';
+      g.beginPath();
+      g.moveTo(64,68); g.quadraticCurveTo(360,20,656,68);
+      g.lineTo(642,446); g.quadraticCurveTo(360,478,78,446); g.closePath();
+      g.fill();
+
+      g.fillStyle = '#0a0d10';
+      g.beginPath();
+      g.moveTo(182,62); g.quadraticCurveTo(360,36,538,62);
+      g.lineTo(542,454); g.lineTo(178,454); g.closePath(); g.fill();
+      g.strokeStyle = 'rgba(255,250,240,.84)'; g.lineWidth = 8;
+      g.strokeRect(184,64,352,386);
+
+      const ref = g.createLinearGradient(0,0,W,0);
+      ref.addColorStop(0,'rgba(255,255,255,0)'); ref.addColorStop(.30,'rgba(255,255,255,.25)'); ref.addColorStop(.46,'rgba(255,255,255,.08)'); ref.addColorStop(1,'rgba(255,255,255,0)');
+      g.fillStyle = ref; g.beginPath(); g.moveTo(220,98); g.lineTo(278,98); g.lineTo(250,432); g.lineTo(204,432); g.closePath(); g.fill();
+
+      g.fillStyle = '#11151a'; g.fillRect(254,86,136,30); g.fillRect(392,86,82,30);
+      g.fillStyle = '#1f86a8'; g.fillRect(398,92,70,18);
+      g.fillStyle = '#36d4ff'; g.fillRect(260,92,58,18);
+      g.fillStyle = '#e8efe7'; g.fillRect(330,92,52,18);
+
+      g.fillStyle = '#d8d9d3'; g.fillRect(82,490,556,62);
+      g.fillStyle = '#be252f'; g.fillRect(84,548,552,102);
+      g.fillStyle = '#efe4c8'; g.fillRect(84,522,552,42);
+      g.fillStyle = 'rgba(255,255,255,.18)'; g.fillRect(84,548,552,4);
+      g.fillStyle = '#9aa1a5'; g.fillRect(330,614,60,8);
+      g.fillStyle = '#111519'; g.fillRect(152,574,60,26); g.fillRect(508,574,60,26);
+      g.fillStyle = 'rgba(255,238,176,.96)'; g.fillRect(160,580,42,14); g.fillRect(518,580,42,14);
+      g.fillStyle = '#14181c'; g.fillRect(446,164,74,24);
+      g.fillStyle = '#eee5d1'; g.font = 'bold 42px sans-serif'; g.fillText('1000', 452, 187);
+    } else if(shapeType === 'keihin'){
+      const shell = g.createLinearGradient(0,0,0,H);
+      shell.addColorStop(0,'#eef2f4');
+      shell.addColorStop(.16,'#bcc5ca');
+      shell.addColorStop(.52,'#68737b');
+      shell.addColorStop(1,'#333a40');
+      g.fillStyle = shell; g.fillRect(0,0,W,H);
       const mask = g.createLinearGradient(0,0,0,H);
-      mask.addColorStop(0,'#fbfbf8');
-      mask.addColorStop(.45,'#eeefeb');
-      mask.addColorStop(1,'#d6d8d6');
+      mask.addColorStop(0,'#ffffff');
+      mask.addColorStop(.44,'#f2f5f5');
+      mask.addColorStop(1,'#c7cbcb');
       g.fillStyle = mask;
       g.beginPath();
-      g.moveTo(88,52);
-      g.quadraticCurveTo(360,8,632,52);
-      g.lineTo(650,458);
-      g.quadraticCurveTo(360,498,70,458);
-      g.closePath();
-      g.fill();
-
-      // 窓は真っ黒に近く、外枠幅を狭く
-      g.fillStyle = '#010304';
+      g.moveTo(96,52); g.quadraticCurveTo(360,18,624,52);
+      g.lineTo(648,462); g.quadraticCurveTo(360,500,72,462); g.closePath(); g.fill();
+      g.fillStyle = '#030507';
       g.beginPath();
-      g.moveTo(112,78);
-      g.quadraticCurveTo(360,34,608,78);
-      g.lineTo(620,422);
-      g.quadraticCurveTo(360,458,100,422);
-      g.closePath();
-      g.fill();
-      g.strokeStyle = 'rgba(248,248,246,.78)';
-      g.lineWidth = 12;
+      g.moveTo(132,84); g.quadraticCurveTo(360,48,588,84);
+      g.lineTo(602,412); g.quadraticCurveTo(360,446,118,412); g.closePath(); g.fill();
+      g.strokeStyle = 'rgba(246,249,249,.82)'; g.lineWidth = 10;
       g.beginPath();
-      g.moveTo(112,78);
-      g.quadraticCurveTo(360,34,608,78);
-      g.lineTo(620,422);
-      g.quadraticCurveTo(360,458,100,422);
-      g.closePath();
-      g.stroke();
-
-      // ガラスの控えめな反射
+      g.moveTo(132,84); g.quadraticCurveTo(360,48,588,84);
+      g.lineTo(602,412); g.quadraticCurveTo(360,446,118,412); g.closePath(); g.stroke();
       const ref = g.createLinearGradient(0,0,W,0);
-      ref.addColorStop(0,'rgba(255,255,255,0)');
-      ref.addColorStop(.32,'rgba(255,255,255,.16)');
-      ref.addColorStop(.46,'rgba(255,255,255,.05)');
-      ref.addColorStop(1,'rgba(255,255,255,0)');
-      g.fillStyle = ref;
-      g.beginPath(); g.moveTo(150,100); g.lineTo(232,100); g.lineTo(184,406); g.lineTo(132,406); g.closePath(); g.fill();
-
-      // 行先表示は黒地の中に小さく
-      g.fillStyle = '#0c1013'; g.fillRect(222,114,276,46);
-      g.fillStyle = pal.line; g.fillRect(240,128,150,16);
-      g.fillStyle = '#ff4b70'; g.fillRect(178,122,28,28); g.fillRect(514,122,28,28);
-      g.fillStyle = '#edf2f5'; g.fillRect(412,129,74,13);
-
-      // 色帯はより大きくして外枠との比率を改善
-      g.fillStyle = pal.line; g.fillRect(84,438,552,110);
-      g.fillStyle = 'rgba(255,255,255,.14)'; g.fillRect(84,438,552,5);
-      g.fillStyle = 'rgba(0,0,0,.22)'; g.fillRect(84,546,552,5);
-
-      // 下部スカート
-      const skirt = g.createLinearGradient(0,560,0,H);
-      skirt.addColorStop(0,'#adb2b4'); skirt.addColorStop(.5,'#71777c'); skirt.addColorStop(1,'#3f4449');
-      g.fillStyle = skirt; g.fillRect(98,554,524,118);
-      g.fillStyle = '#1c2227'; g.fillRect(254,580,212,110);
-      g.fillStyle = '#0c1013'; g.fillRect(322,614,76,54);
-
-      // ライトは小さめに
-      g.fillStyle = '#111519'; g.fillRect(110,594,118,58); g.fillRect(492,594,118,58);
-      g.fillStyle = '#c6404d'; g.fillRect(132,610,46,26);
-      g.fillStyle = 'rgba(255,238,176,.96)'; g.fillRect(532,610,44,26);
-      g.strokeStyle = 'rgba(24,28,32,.94)'; g.lineWidth = 6;
-      g.beginPath(); g.moveTo(270,390); g.lineTo(346,354); g.stroke();
-      g.beginPath(); g.moveTo(450,390); g.lineTo(374,354); g.stroke();
-      g.fillStyle = '#ffffff'; g.fillRect(530,494,58,14);
+      ref.addColorStop(0,'rgba(255,255,255,0)'); ref.addColorStop(.30,'rgba(255,255,255,.22)'); ref.addColorStop(.52,'rgba(255,255,255,.08)'); ref.addColorStop(1,'rgba(255,255,255,0)');
+      g.fillStyle = ref; g.beginPath(); g.moveTo(158,106); g.lineTo(238,106); g.lineTo(192,394); g.lineTo(144,394); g.closePath(); g.fill();
+      g.fillStyle = '#0c1013'; g.fillRect(238,118,244,40);
+      g.fillStyle = pal.line; g.fillRect(252,128,124,18);
+      g.fillStyle = '#edf2f5'; g.fillRect(398,129,68,14);
+      g.fillStyle = pal.line; g.fillRect(96,434,528,94);
+      g.fillStyle = 'rgba(255,255,255,.16)'; g.fillRect(96,434,528,5);
+      g.fillStyle = 'rgba(0,0,0,.22)'; g.fillRect(96,526,528,4);
+      const skirt = g.createLinearGradient(0,566,0,H);
+      skirt.addColorStop(0,'#eef2f2'); skirt.addColorStop(.40,'#d3d8d8'); skirt.addColorStop(1,'#aeb5b8');
+      g.fillStyle = skirt; g.fillRect(120,570,480,66);
+      g.fillStyle = 'rgba(255,255,255,.26)'; g.fillRect(138,578,444,4);
+      g.fillStyle = 'rgba(0,0,0,.08)'; g.fillRect(138,632,444,2);
+      g.fillStyle = '#b9c0c3'; g.fillRect(330,606,60,8);
+      g.fillStyle = '#111519'; g.fillRect(122,594,104,42); g.fillRect(494,594,104,42);
+      g.fillStyle = 'rgba(255,238,176,.96)'; g.fillRect(146,606,38,20); g.fillRect(536,606,38,20);
+    } else {
+      const shell = g.createLinearGradient(0,0,0,H);
+      shell.addColorStop(0,'#d9ff8c');
+      shell.addColorStop(.14,'#97e44e');
+      shell.addColorStop(.46,'#64b42d');
+      shell.addColorStop(1,'#43821d');
+      g.fillStyle = shell; g.fillRect(0,0,W,H);
+      g.fillStyle = '#05070a';
+      g.beginPath();
+      g.moveTo(140,70); g.quadraticCurveTo(360,26,580,70);
+      g.lineTo(604,414); g.quadraticCurveTo(360,446,116,414); g.closePath(); g.fill();
+      g.strokeStyle = 'rgba(156,236,85,.88)'; g.lineWidth = 16;
+      g.beginPath();
+      g.moveTo(140,70); g.quadraticCurveTo(360,26,580,70);
+      g.lineTo(604,414); g.quadraticCurveTo(360,446,116,414); g.closePath(); g.stroke();
+      const ref = g.createLinearGradient(0,0,W,0);
+      ref.addColorStop(0,'rgba(255,255,255,0)'); ref.addColorStop(.28,'rgba(255,255,255,.24)'); ref.addColorStop(.48,'rgba(255,255,255,.08)'); ref.addColorStop(1,'rgba(255,255,255,0)');
+      g.fillStyle = ref; g.beginPath(); g.moveTo(164,98); g.lineTo(238,98); g.lineTo(194,394); g.lineTo(150,394); g.closePath(); g.fill();
+      g.fillStyle = '#0c1013'; g.fillRect(220,110,280,44);
+      g.fillStyle = pal.line; g.fillRect(250,122,166,18);
+      g.fillStyle = '#edf2f5'; g.fillRect(426,124,60,14);
+      for(let y=0;y<10;y++){
+        const alpha = 0.22 - y*0.018;
+        g.fillStyle = `rgba(5,8,10,${alpha.toFixed(3)})`;
+        for(let x=0;x<32;x++) g.fillRect(126+x*15, 454+y*14, 7, 7);
+      }
+      const skirt = g.createLinearGradient(0,572,0,H);
+      skirt.addColorStop(0,'#e0e5e5'); skirt.addColorStop(.45,'#c9cfd0'); skirt.addColorStop(1,'#b5bcbf');
+      g.fillStyle = skirt; g.fillRect(144,578,432,52);
+      g.fillStyle = 'rgba(255,255,255,.22)'; g.fillRect(160,584,400,4);
+      g.fillStyle = 'rgba(0,0,0,.08)'; g.fillRect(160,626,400,2);
+      g.fillStyle = '#b1b8bb'; g.fillRect(336,606,48,7);
+      g.fillStyle = '#111519'; g.fillRect(126,588,78,34); g.fillRect(516,588,78,34);
+      g.fillStyle = 'rgba(255,238,176,.96)'; g.fillRect(148,600,30,16); g.fillRect(542,600,30,16);
+      g.fillStyle = '#d1495b'; g.fillRect(104,104,22,22); g.fillRect(594,104,22,22);
     }
 
-    for(let i=0;i<380;i++){
-      const x = Math.random()*W, y = Math.random()*H;
-      g.fillStyle = `rgba(255,255,255,${Math.random()*0.035})`;
-      g.fillRect(x,y,1,1);
-    }
-
-    const tex = new THREE.CanvasTexture(c);
-    tex.minFilter = THREE.LinearMipmapLinearFilter;
-    tex.magFilter = THREE.LinearFilter;
-    tex.generateMipmaps = true;
-    tex.anisotropy = Math.min(4, renderer.capabilities.getMaxAnisotropy ? renderer.capabilities.getMaxAnisotropy() : 1);
-    tex.userData.sharedTexture = true;
-    tex.needsUpdate = true;
-    return tex;
+    return new THREE.CanvasTexture(c);
   }
 
   const trainTextures = {
@@ -4068,8 +4062,79 @@
     return {side:trainTextures.greenSide, face:trainTextures.greenFace};
   }
 
+  function makeTrainBodyGeometry(length=67.5){
+    const geo = new THREE.BoxGeometry(2.26, 2.56, length, 8, 5, 18);
+    const pos = geo.attributes.position;
+    for(let i=0;i<pos.count;i++){
+      let x = pos.getX(i), y = pos.getY(i), z = pos.getZ(i);
+      const halfW = 1.13, halfH = 1.28, halfL = length/2;
+      const ax = Math.abs(x)/halfW;
+      const ay = Math.abs(y)/halfH;
+      const az = Math.abs(z)/halfL;
+      if(y > 0.18) x *= 1 - 0.08 * ((y-0.18)/(halfH-0.18));
+      if(y > 0.72) y += 0.07 * (1-ax);
+      if(y < -0.65) x *= 0.97;
+      if(az > 0.84) x *= 1 - 0.05 * ((az-0.84)/0.16);
+      if(ax > 0.88 && y > -0.2) x *= 0.985;
+      pos.setXYZ(i, x, y, z);
+    }
+    pos.needsUpdate = true;
+    geo.computeVertexNormals();
+    return geo;
+  }
+
+  function makeTrainCabGeometry(shapeType='yamate'){
+    const geo = new THREE.BoxGeometry(2.30, 2.64, 1.02, 10, 7, 6);
+    const pos = geo.attributes.position;
+    for(let i=0;i<pos.count;i++){
+      let x = pos.getX(i), y = pos.getY(i), z = pos.getZ(i);
+      const halfW = 1.15, halfH = 1.32;
+      const ax = Math.abs(x)/halfW;
+      if(z > 0){
+        const zNorm = z/0.51;
+        if(shapeType === 'keikyu'){
+          x *= 1 - 0.05*zNorm*(0.20 + Math.max(0,y)/halfH);
+          if(y > 0.15) y += 0.03*(1-ax)*zNorm;
+          if(y < -0.05) z -= 0.08*((-0.05-y)/(halfH-0.05))*zNorm;
+        }else if(shapeType === 'keihin'){
+          x *= 1 - 0.11*zNorm*(0.30 + Math.max(0,y)/halfH);
+          if(y > 0.0) y += 0.04*(1-ax)*zNorm;
+          if(y < -0.10) z -= 0.10*((-0.10-y)/(halfH-0.10))*zNorm;
+        }else{
+          x *= 1 - 0.14*zNorm*(0.45 + Math.max(0,y)/halfH);
+          if(y > -0.02) y += 0.06*(1-ax)*zNorm;
+          if(y < -0.12) z -= 0.13*((-0.12-y)/(halfH-0.12))*zNorm;
+        }
+      }
+      if(Math.abs(y) > 0.95) x *= shapeType === 'keikyu' ? 0.985 : 0.97;
+      pos.setXYZ(i, x, y, z);
+    }
+    pos.needsUpdate = true;
+    geo.computeVertexNormals();
+    return geo;
+  }
+
+  function getTrainShapeType(key='green'){
+    const k = (key || 'green').toLowerCase();
+    if(k === 'red' || k === 'pink') return 'keikyu';
+    if(k === 'blue') return 'keihin';
+    return 'yamate';
+  }
+
+  const trainBodyLength = 65.2;
+  const trainBodyGeoShared = makeTrainBodyGeometry(trainBodyLength);
+  const trainCabGeoYamate = makeTrainCabGeometry('yamate');
+  const trainCabGeoKeihin = makeTrainCabGeometry('keihin');
+  const trainCabGeoKeikyu = makeTrainCabGeometry('keikyu');
+
+  function getTrainCabGeometryForKey(key='green'){
+    const t = getTrainShapeType(key);
+    if(t === 'keikyu') return trainCabGeoKeikyu;
+    if(t === 'keihin') return trainCabGeoKeihin;
+    return trainCabGeoYamate;
+  }
+
   function addTrainOnOppositeTrack(zStart,length,side=1,stripe='green'){
-    // 先頭車だけ少しポリゴン数を増やし、前面を立体化
     const trackX = side*3.4;
     const trainLength = 67.5;
     const zc = zStart - 59;
@@ -4087,88 +4152,154 @@
     const glassMat = new THREE.MeshStandardMaterial({color:0x030506, roughness:.06, metalness:.10});
     const stripeMat = new THREE.MeshStandardMaterial({color:new THREE.Color(pal.line), roughness:.44, metalness:.08});
 
-    const bodyGeo = new THREE.BoxGeometry(2.26,2.56,trainLength);
-    const bodyMats = [sideMat, sideMat, roofMat, underMat, frontMat, frontMat];
-    const body = new THREE.Mesh(bodyGeo, bodyMats);
+    const body = new THREE.Mesh(trainBodyGeoShared, [sideMat, sideMat, roofMat, underMat, shellMat, shellMat]);
     body.position.set(trackX,1.35,zc); world.add(body);
-
-    // 側面上部の肩ラインと下部スカート
-    const shoulderL = new THREE.Mesh(new THREE.BoxGeometry(.10,.18,trainLength-1.0), edgeMat);
+    const shoulderL = new THREE.Mesh(new THREE.BoxGeometry(.10,.18,trainBodyLength-0.8), edgeMat);
     shoulderL.position.set(trackX-1.04,2.18,zc); world.add(shoulderL);
-    const shoulderR = new THREE.Mesh(new THREE.BoxGeometry(.10,.18,trainLength-1.0), edgeMat);
+    const shoulderR = new THREE.Mesh(new THREE.BoxGeometry(.10,.18,trainBodyLength-0.8), edgeMat);
     shoulderR.position.set(trackX+1.04,2.18,zc); world.add(shoulderR);
-    const lowerSkirt = new THREE.Mesh(new THREE.BoxGeometry(2.04,.18,trainLength-1.1), underMat);
-    lowerSkirt.position.set(trackX,.40,zc); world.add(lowerSkirt);
-    const roof = new THREE.Mesh(new THREE.BoxGeometry(1.86,.26,trainLength-1.8), roofMat);
+    const roof = new THREE.Mesh(new THREE.BoxGeometry(1.86,.26,trainBodyLength-1.0), roofMat);
     roof.position.set(trackX,2.66,zc); world.add(roof);
 
-    // 先頭部を少し厚みのある別パーツで作る
-    const cabGeo = new THREE.BoxGeometry(2.30,2.64,0.92);
-    const cabMats = [shellMat, shellMat, roofMat, underMat, frontMat, shellMat];
-    const cabA = new THREE.Mesh(cabGeo, cabMats);
+    const cabGeo = getTrainCabGeometryForKey(stripe);
+    const cabA = new THREE.Mesh(cabGeo, [shellMat, shellMat, roofMat, underMat, frontMat, frontMat]);
     cabA.position.set(trackX,1.38,zc + trainLength/2 - .32); world.add(cabA);
-    const cabB = new THREE.Mesh(cabGeo, cabMats);
+    const cabB = new THREE.Mesh(cabGeo, [shellMat, shellMat, roofMat, underMat, frontMat, frontMat]);
     cabB.rotation.y = Math.PI;
     cabB.position.set(trackX,1.38,zc - trainLength/2 + .32); world.add(cabB);
 
-    const faceFrames = [1,-1].map(dir=>{
-      const frame = new THREE.Mesh(new THREE.BoxGeometry(2.18,2.48,.12), shellMat);
-      frame.position.set(trackX,1.39,zc + dir*(trainLength/2 + .16));
-      frame.rotation.y = dir>0 ? 0 : Math.PI;
-      world.add(frame);
-      return frame;
-    });
-
-    // 窓ガラスの黒い板、帯色、下部スカートを前面に重ねて紙っぽさを軽減
     [1,-1].forEach(dir=>{
-      const zf = zc + dir*(trainLength/2 + .23);
-      const glass = new THREE.Mesh(new THREE.BoxGeometry(isKeikyu?1.62:1.76, isKeikyu?1.12:1.18, .05), glassMat);
+      const zf = zc + dir*(trainLength/2 + .08);
+      const glass = new THREE.Mesh(new THREE.BoxGeometry(isKeikyu?1.62:1.76, isKeikyu?1.12:1.18, .04), glassMat);
       glass.position.set(trackX,1.86,zf); glass.rotation.y = dir>0 ? 0 : Math.PI; world.add(glass);
-
-      const band = new THREE.Mesh(new THREE.BoxGeometry(isKeikyu?1.84:1.94, .32, .06), stripeMat);
-      band.position.set(trackX,.92,zf+.001*dir); band.rotation.y = dir>0 ? 0 : Math.PI; world.add(band);
-
-      const skirt = new THREE.Mesh(new THREE.BoxGeometry(1.38,.74,.20), underMat);
-      skirt.position.set(trackX,.50,zc + dir*(trainLength/2 + .15)); skirt.rotation.y = dir>0 ? 0 : Math.PI; world.add(skirt);
-
-      const coupler = new THREE.Mesh(new THREE.BoxGeometry(.34,.26,.14), edgeMat);
-      coupler.position.set(trackX,.34,zc + dir*(trainLength/2 + .30)); coupler.rotation.y = dir>0 ? 0 : Math.PI; world.add(coupler);
-
-      // 細い縁取りでおもちゃ感を抑える
+      const band = new THREE.Mesh(new THREE.BoxGeometry(isKeikyu?1.84:1.94, .30, .04), stripeMat);
+      band.position.set(trackX,.96,zf+.001*dir); band.rotation.y = dir>0 ? 0 : Math.PI; world.add(band);
       const brow = new THREE.Mesh(new THREE.BoxGeometry(isKeikyu?1.68:1.80, .08, .03), new THREE.MeshStandardMaterial({color:isKeikyu?0xf3ead8:0xf4f4f1, roughness:.56, metalness:.04}));
       brow.position.set(trackX,2.43,zf); brow.rotation.y = dir>0 ? 0 : Math.PI; world.add(brow);
     });
 
-    for(let i=0;i<4;i++){
+    const roofOffsets = [-19.8,-7.2,5.4,18.0];
+    roofOffsets.forEach(bz=>{
       const unit = new THREE.Mesh(new THREE.BoxGeometry(.70,.18,3.8), new THREE.MeshStandardMaterial({color:0x8c9296,roughness:.72,metalness:.14}));
-      unit.position.set(trackX,2.86,zc - trainLength*.30 + i*11.5); world.add(unit);
-    }
-    for(let i=0;i<6;i++){
-      const bogie = new THREE.Mesh(new THREE.BoxGeometry(1.74,.34,1.68), underMat);
-      bogie.position.set(trackX,.38,zc - trainLength*.40 + i*13.2); world.add(bogie);
-    }
+      unit.position.set(trackX,2.86,zc + bz); world.add(unit);
+    });
+    const bogieOffsets = [-30.0,-21.4,-13.2,-4.6,4.6,13.2,21.4,30.0];
+    bogieOffsets.forEach(bz=>{
+      const bogie = new THREE.Mesh(new THREE.BoxGeometry(1.58,.30,1.26), underMat);
+      bogie.position.set(trackX,.36,zc + bz); world.add(bogie);
+    });
+  }
+
+
+  const movingPassingTrains = [];
+
+  function createPassingTrain(side=1, stripe='green'){
+    const group = new THREE.Group();
+    const trackX = side * 3.4;
+    const trainLength = 67.5;
+    const zc = 0;
+    const tex = getTrainTextureSet(stripe);
+    const pal = trainPalette(stripe);
+    const isKeikyu = pal.family === 'keikyu';
+    const shellColor = (stripe==='red' || stripe==='pink') ? 0xc24f4f : 0x555d64;
+    const edgeColor = (stripe==='red' || stripe==='pink') ? 0x6f2323 : 0x2f353b;
+    const sideMat = new THREE.MeshStandardMaterial({map:tex.side, roughness:.32, metalness:.38});
+    const frontMat = new THREE.MeshBasicMaterial({map:tex.face});
+    const shellMat = new THREE.MeshStandardMaterial({color:shellColor, roughness:.42, metalness:.30});
+    const edgeMat = new THREE.MeshStandardMaterial({color:edgeColor, roughness:.52, metalness:.14});
+    const roofMat = new THREE.MeshStandardMaterial({color:0xaeb3b6, roughness:.48, metalness:.22});
+    const underMat = new THREE.MeshStandardMaterial({color:0x1f2428, roughness:.70, metalness:.10});
+    const glassMat = new THREE.MeshStandardMaterial({color:0x030506, roughness:.06, metalness:.10});
+    const stripeMat = new THREE.MeshStandardMaterial({color:new THREE.Color(pal.line), roughness:.44, metalness:.08});
+
+    const body = new THREE.Mesh(trainBodyGeoShared, [sideMat, sideMat, roofMat, underMat, shellMat, shellMat]);
+    body.position.set(trackX,1.35,zc); group.add(body);
+    const shoulderL = new THREE.Mesh(new THREE.BoxGeometry(.10,.18,trainBodyLength-0.8), edgeMat);
+    shoulderL.position.set(trackX-1.04,2.18,zc); group.add(shoulderL);
+    const shoulderR = new THREE.Mesh(new THREE.BoxGeometry(.10,.18,trainBodyLength-0.8), edgeMat);
+    shoulderR.position.set(trackX+1.04,2.18,zc); group.add(shoulderR);
+    const roof = new THREE.Mesh(new THREE.BoxGeometry(1.86,.26,trainBodyLength-1.0), roofMat);
+    roof.position.set(trackX,2.66,zc); group.add(roof);
+
+    const cabGeo = getTrainCabGeometryForKey(stripe);
+    const cabA = new THREE.Mesh(cabGeo, [shellMat, shellMat, roofMat, underMat, frontMat, frontMat]);
+    cabA.position.set(trackX,1.38,zc + trainLength/2 - .32); group.add(cabA);
+    const cabB = new THREE.Mesh(cabGeo, [shellMat, shellMat, roofMat, underMat, frontMat, frontMat]);
+    cabB.rotation.y = Math.PI;
+    cabB.position.set(trackX,1.38,zc - trainLength/2 + .32); group.add(cabB);
+
+    [1,-1].forEach(dir=>{
+      const zf = zc + dir*(trainLength/2 + .08);
+      const glass = new THREE.Mesh(new THREE.BoxGeometry(isKeikyu?1.62:1.76, isKeikyu?1.12:1.18, .04), glassMat);
+      glass.position.set(trackX,1.86,zf); glass.rotation.y = dir>0 ? 0 : Math.PI; group.add(glass);
+      const band = new THREE.Mesh(new THREE.BoxGeometry(isKeikyu?1.84:1.94, .30, .04), stripeMat);
+      band.position.set(trackX,.96,zf+.001*dir); band.rotation.y = dir>0 ? 0 : Math.PI; group.add(band);
+      const brow = new THREE.Mesh(new THREE.BoxGeometry(isKeikyu?1.68:1.80, .08, .03), new THREE.MeshStandardMaterial({color:isKeikyu?0xf3ead8:0xf4f4f1, roughness:.56, metalness:.04}));
+      brow.position.set(trackX,2.43,zf); brow.rotation.y = dir>0 ? 0 : Math.PI; group.add(brow);
+    });
+
+    const roofOffsets = [-19.8,-7.2,5.4,18.0];
+    roofOffsets.forEach(bz=>{
+      const unit = new THREE.Mesh(new THREE.BoxGeometry(.70,.18,3.8), new THREE.MeshStandardMaterial({color:0x8c9296,roughness:.72,metalness:.14}));
+      unit.position.set(trackX,2.86,zc + bz); group.add(unit);
+    });
+    const bogieOffsets = [-30.0,-21.4,-13.2,-4.6,4.6,13.2,21.4,30.0];
+    bogieOffsets.forEach(bz=>{
+      const bogie = new THREE.Mesh(new THREE.BoxGeometry(1.58,.30,1.26), underMat);
+      bogie.position.set(trackX,.36,zc + bz); group.add(bogie);
+    });
+
+    return group;
+  }
+
+  const passingTrainBlockedRanges = [
+    {start: 450, end: 560},
+    {start: 885, end: 1010},
+    {start: 2460, end: 2585},
+    {start: 3840, end: 3950}
+  ];
+
+  function isInPassingTrainBlockedRange(s, margin=0){
+    return passingTrainBlockedRanges.some(r => s >= r.start - margin && s <= r.end + margin);
+  }
+
+  function findSafePassingTrainSpawn(s){
+    let safe = s;
+    for(let i=0;i<20 && isInPassingTrainBlockedRange(safe, 120); i++) safe += 240;
+    return safe;
+  }
+
+  function addMovingPassingTrain({startS=900, speedKmh=60, side=1, stripe='green', respawnGap=1500} = {}){
+    const group = createPassingTrain(side, stripe);
+    const safeStart = findSafePassingTrainSpawn(startS);
+    group.position.z = -safeStart;
+    world.add(group);
+    movingPassingTrains.push({group, s:safeStart, speedKmh, respawnGap, side, stripe});
+  }
+
+  function initMovingPassingTrains(){
+    if(movingPassingTrains.length) return;
+    addMovingPassingTrain({startS: 920,  speedKmh: 58, side: 1, stripe: 'yellow', respawnGap: 1500});
+    addMovingPassingTrain({startS: 2380, speedKmh: 66, side: 1, stripe: 'red',    respawnGap: 1850});
+  }
+
+  function updateMovingPassingTrains(dt){
+    if(!movingPassingTrains.length) return;
+    const recycleBehind = Math.max(0, routeS - 140);
+    const baseAhead = routeS + Math.max(1200, SCENERY_FORWARD_DISTANCE * 0.82);
+    movingPassingTrains.forEach((train, idx)=>{
+      train.s -= train.speedKmh * dt * .62;
+      if(train.s < recycleBehind){
+        train.s = findSafePassingTrainSpawn(baseAhead + idx*220 + Math.random()*180 + train.respawnGap);
+      }
+      train.group.visible = !isInPassingTrainBlockedRange(train.s, 70);
+      train.group.position.z = -train.s;
+    });
   }
 
   function addStopPositionMarker(z, side=1){
-    // ホーム奥側の停止位置。進行方向から見えるように線路上の黄色停止線と縦の目標板を設置
-    const line = new THREE.Mesh(new THREE.BoxGeometry(2.7,.055,.26), new THREE.MeshBasicMaterial({color:0xffe100}));
-    line.position.set(0,.37,z); world.add(line);
-    const redCenter = new THREE.Mesh(new THREE.BoxGeometry(.12,1.05,.12), new THREE.MeshBasicMaterial({color:0xff3333}));
-    redCenter.position.set(0,.9,z+.02); world.add(redCenter);
-
-    // ホーム端に立つ停止位置標識
-    const post = new THREE.Mesh(new THREE.BoxGeometry(.08,1.45,.08), mat.pole);
-    post.position.set(side*3.15,1.02,z+.45); world.add(post);
-    const board = new THREE.Mesh(new THREE.BoxGeometry(.78,.52,.06), new THREE.MeshBasicMaterial({color:0xffe100}));
-    board.position.set(side*3.15,1.84,z+.45); world.add(board);
-    const mark = new THREE.Mesh(new THREE.BoxGeometry(.50,.13,.07), new THREE.MeshBasicMaterial({color:0x111111}));
-    mark.position.set(side*3.15,1.84,z+.41); world.add(mark);
-
-    // ホーム先端であることが分かる短いエンドフェンス
-    [-1,1].forEach(sg=>{
-      const fence = new THREE.Mesh(new THREE.BoxGeometry(.12,.75,2.2), new THREE.MeshStandardMaterial({color:0xd8d8d0,roughness:.65}));
-      fence.position.set(sg*3.38,.98,z-1.1); world.add(fence);
-    });
+    // 線路上やホーム端の黄色・白色の停止位置看板は表示しない
+    return;
   }
 
   const crossingFlashMats = [];
@@ -4299,16 +4430,14 @@
   const bridgePortalMat = new THREE.MeshStandardMaterial({map:bridgePortalTexture, roughness:.72, metalness:.12, side:THREE.DoubleSide});
 
   function addTrussRailBridge(zStart, length=108){
-    // 写真のような「古い赤茶色の上路式トラス鉄橋」に作り直し
-    // ポイント：開放的な門型フレーム、上部X梁、側面Xトラス、リベット、歩廊、枕木を追加
     const zMid = zStart - length / 2;
     const spanCount = 9;
     const panel = length / spanCount;
     const railLevel = .42;
     const deckY = .10;
     const lowerY = .95;
-    const upperY = 6.25;
-    const topY = 6.75;
+    const upperY = 6.10;
+    const topY = 6.86;
     const sideX = 4.45;
 
     const ironMat = new THREE.MeshStandardMaterial({color:0x7a3426, roughness:.72, metalness:.28});
@@ -4318,12 +4447,9 @@
     const walkMat = new THREE.MeshStandardMaterial({color:0x8f8a7b, roughness:.9, metalness:.04});
     const boltMat = new THREE.MeshStandardMaterial({color:0x2a1713, roughness:.55, metalness:.45});
 
-    // 側面を鉄板で塞がず、骨組み主体の鉄橋に戻す
-    // （以前の大きな板ポリゴンはトンネルのように見えてしまうため撤去）
-
-    function box(w,h,d,x,y,z,material=ironMat,rx=0,ry=0,rz=0){
+    function box(w,h,d,x,y,z,material=ironMat){
       const m = new THREE.Mesh(new THREE.BoxGeometry(w,h,d), material);
-      m.position.set(x,y,z); m.rotation.set(rx,ry,rz); m.castShadow=true; m.receiveShadow=true; world.add(m); return m;
+      m.position.set(x,y,z); m.castShadow=true; m.receiveShadow=true; world.add(m); return m;
     }
     function cylBetween(a,b,r,material=ironMat,seg=10){
       const va = new THREE.Vector3(a[0],a[1],a[2]);
@@ -4340,7 +4466,6 @@
       b.position.set(x,y,z); world.add(b); return b;
     }
 
-    // 橋の下：水面・土手。鉄橋区間だと分かりやすくする
     const water = new THREE.Mesh(new THREE.BoxGeometry(32,.035,length+34), new THREE.MeshStandardMaterial({color:0x566f78, roughness:.58, metalness:.05}));
     water.position.set(0,-.34,zMid); world.add(water);
     [-1,1].forEach(side=>{
@@ -4348,9 +4473,8 @@
       bank.position.set(side*15,-.25,zMid); world.add(bank);
     });
 
-    // 軌道床：写真のように中央は枕木・保守通路・側歩廊が見える形にする
     box(5.25,.18,length,0,deckY,zMid,deckMat);
-    box(.62,.08,length,0,.31,zMid,walkMat); // 中央保守通路
+    box(.62,.08,length,0,.31,zMid,walkMat);
     [-3.70,3.70].forEach(x=>{
       box(.92,.10,length,x,.52,zMid,walkMat);
       box(.08,.48,length,x + Math.sign(x)*.50,.84,zMid,darkIronMat);
@@ -4368,21 +4492,18 @@
       }
     }
 
-    // 長手方向の上下弦材
     [-sideX, sideX].forEach(x=>{
       box(.38,.38,length,x,lowerY,zMid,ironMat);
       box(.42,.42,length,x,upperY,zMid,ironMat);
       box(.22,.22,length,x,topY,zMid,darkIronMat);
-      // 外側の補強帯
       box(.12,4.8,length,x + Math.sign(x)*.21,3.55,zMid,darkIronMat);
     });
 
-    // 各パネルの門型フレーム・縦柱・上部横梁
     for(let i=0;i<=spanCount;i++){
       const zz = zStart - i*panel;
       [-sideX, sideX].forEach(x=>{
         cylBetween([x,lowerY,zz],[x,upperY,zz],.145,ironMat,12);
-        // 写真右端の縦材にある四角い補強プレート風
+        cylBetween([x,upperY,zz],[x,topY,zz],.06,darkIronMat,8);
         for(let p=0;p<5;p++){
           const yy = 1.55 + p*.86;
           box(.045,.25,.36,x+Math.sign(x)*.18,yy,zz,edgeRustMat);
@@ -4390,16 +4511,10 @@
           bolt(x+Math.sign(x)*.22,yy-.12,zz-.18,.045);
         }
       });
-      box(sideX*2+.42,.30,.30,0,upperY,zz,ironMat);      // 上横梁
-      box(sideX*2-.8,.18,.18,0,topY,zz,darkIronMat);       // 最上部補助梁
-      // 門型上部の斜め補強（写真のX形）
-      cylBetween([-sideX,upperY,zz],[0,topY,zz],.075,darkIronMat,8);
-      cylBetween([ sideX,upperY,zz],[0,topY,zz],.075,darkIronMat,8);
-      // 吊架線の吊り金具
-      cylBetween([0,topY,zz],[0,5.25,zz],.025,darkIronMat,6);
+      box(sideX*2+.42,.30,.30,0,upperY,zz,ironMat);
+      box(sideX*2-.80,.18,.18,0,topY,zz,darkIronMat);
     }
 
-    // 側面の大きなXトラス＋中段の細い三角トラス
     for(let i=0;i<spanCount;i++){
       const z1 = zStart - i*panel;
       const z2 = zStart - (i+1)*panel;
@@ -4407,33 +4522,18 @@
       [-sideX, sideX].forEach(x=>{
         cylBetween([x,lowerY,z1],[x,upperY,z2],.105,ironMat,10);
         cylBetween([x,upperY,z1],[x,lowerY,z2],.105,ironMat,10);
-        cylBetween([x,3.55,z1],[x,upperY,zc],.055,darkIronMat,8);
-        cylBetween([x,3.55,z2],[x,upperY,zc],.055,darkIronMat,8);
-        cylBetween([x,lowerY,zc],[x,3.55,z1],.055,darkIronMat,8);
-        cylBetween([x,lowerY,zc],[x,3.55,z2],.055,darkIronMat,8);
-        // 側面下部の横桁
         box(.25,.16,panel,x,3.55,zc,darkIronMat);
-        // 接合部リベット
         [lowerY,3.55,upperY].forEach(y=>{
           bolt(x+Math.sign(x)*.18,y,z1+.12,.045);
           bolt(x+Math.sign(x)*.18,y,z2-.12,.045);
         });
       });
-
-      // 天井のX梁。左右の主構に直接つながるようにする
-      cylBetween([-sideX,upperY,z1],[ sideX,upperY,z2],.085,darkIronMat,10);
-      cylBetween([ sideX,upperY,z1],[-sideX,upperY,z2],.085,darkIronMat,10);
-      // 各パネル端に横桁を入れて、X梁が橋本体に接続して見えるようにする
-      box(sideX*2-.42,.16,.16,0,upperY,z1,darkIronMat);
-      box(sideX*2-.42,.16,.16,0,upperY,z2,darkIronMat);
-      // 上部の補助X梁
-      cylBetween([-sideX*.72,topY,z1],[ sideX*.72,topY,z2],.058,ironMat,8);
-      cylBetween([ sideX*.72,topY,z1],[-sideX*.72,topY,z2],.058,ironMat,8);
-      box(sideX*1.46,.10,.10,0,topY,z1,ironMat);
-      box(sideX*1.46,.10,.10,0,topY,z2,ironMat);
+      box(sideX*2-.42,.16,.16,0,topY,z1,darkIronMat);
+      box(sideX*2-.42,.16,.16,0,topY,z2,darkIronMat);
+      cylBetween([-sideX,topY,z1],[ sideX,topY,z2],.085,darkIronMat,10);
+      cylBetween([ sideX,topY,z1],[-sideX,topY,z2],.085,darkIronMat,10);
     }
 
-    // 入口と出口を写真のような重い門構えにする
     [zStart, zStart-length].forEach(zz=>{
       box(10.15,.46,.38,0,topY+.18,zz,darkIronMat);
       [-sideX,sideX].forEach(x=>{
@@ -4444,11 +4544,9 @@
           bolt(x+Math.sign(x)*.40,y,zz-.22,.045);
         }
       });
-      // 下側にも横桁を入れて、箱だけに見えないようにする
       box(8.9,.26,.35,0,lowerY,zz,ironMat);
     });
 
-    // ガードレールと架線柱の支持材
     [-3.92,3.92].forEach(x=>{
       box(.08,.95,length,x,1.28,zMid,darkIronMat);
       box(.08,.06,length,x,1.88,zMid,ironMat);
@@ -5508,10 +5606,7 @@
       boxL.position.set(-4.58,.60,zz); world.add(boxL);
       const boxR = new THREE.Mesh(new THREE.BoxGeometry(.40,.96,.30), facilityMat);
       boxR.position.set(4.58,.60,zz-6); world.add(boxR);
-      const markerL = new THREE.Mesh(new THREE.BoxGeometry(.22,.22,.02), warningMat);
-      markerL.position.set(-5.08,1.50,zz); markerL.rotation.y = Math.PI/2; world.add(markerL);
-      const markerR = new THREE.Mesh(new THREE.BoxGeometry(.22,.22,.02), warningMat);
-      markerR.position.set(5.08,1.50,zz-6); markerR.rotation.y = -Math.PI/2; world.add(markerR);
+      // 小さな黄白マーカーは省略して視界をすっきりさせる
     }
   }
 
@@ -6052,6 +6147,47 @@
     }
   }
 
+  function addIndustrialPark(zStart, length=180){
+    const zMid = zStart - length/2;
+    const groundMat = new THREE.MeshStandardMaterial({color:0x8a8d82, roughness:.92});
+    const roadMat = new THREE.MeshStandardMaterial({color:0x55595c, roughness:.88});
+    const wallMat = new THREE.MeshStandardMaterial({color:0xc9cdc8, roughness:.84});
+    const roofMat = new THREE.MeshStandardMaterial({color:0x6b747b, roughness:.80});
+    const darkMat = new THREE.MeshStandardMaterial({color:0x394046, roughness:.78});
+    const tankMat = new THREE.MeshStandardMaterial({color:0xd6d8d2, roughness:.64, metalness:.10});
+    [-1,1].forEach(side=>{
+      const baseX = side*13.5;
+      const yard = new THREE.Mesh(new THREE.BoxGeometry(11.5,.06,length-12), groundMat);
+      yard.position.set(baseX,.03,zMid); world.add(yard);
+      const road = new THREE.Mesh(new THREE.BoxGeometry(4.0,.05,length-6), roadMat);
+      road.position.set(baseX-side*4.0,.05,zMid); world.add(road);
+      for(let i=0;i<3;i++){
+        const z = zStart - 24 - i*((length-48)/2);
+        const w = 5.6 + (i%2)*1.1;
+        const d = 16 + (i%2)*3;
+        const h = 3.4 + (i%2)*.6;
+        const hall = new THREE.Mesh(new THREE.BoxGeometry(w,h,d), wallMat);
+        hall.position.set(baseX + side*1.5, h/2, z); world.add(hall);
+        const roof = new THREE.Mesh(new THREE.BoxGeometry(w+.4,.35,d+.5), roofMat);
+        roof.position.set(baseX + side*1.5, h+.12, z); world.add(roof);
+      }
+      const tank1 = new THREE.Mesh(new THREE.CylinderGeometry(1.25,1.25,3.8,18), tankMat);
+      tank1.position.set(baseX - side*4.2,1.9,zMid - 20); world.add(tank1);
+      const tank2 = new THREE.Mesh(new THREE.CylinderGeometry(1.0,1.0,3.1,18), tankMat);
+      tank2.position.set(baseX - side*6.2,1.55,zMid + 12); world.add(tank2);
+      const stack = new THREE.Mesh(new THREE.CylinderGeometry(.34,.42,6.2,12), new THREE.MeshStandardMaterial({color:0xb1b4af, roughness:.76}));
+      stack.position.set(baseX - side*1.4,3.1,zMid + 36); world.add(stack);
+      for(let k=0;k<3;k++){
+        const truck = new THREE.Mesh(new THREE.BoxGeometry(1.1,.9,2.4), new THREE.MeshStandardMaterial({color:[0xd8d8d8,0x3b72b4,0xb94646][k%3], roughness:.58}));
+        truck.position.set(baseX - side*4.0,.48,zStart - 28 - k*16); world.add(truck);
+      }
+      for(let k=0;k<10;k++){
+        const post = new THREE.Mesh(new THREE.BoxGeometry(.08,.7,.08), darkMat);
+        post.position.set(baseX - side*5.8,.40,zStart - 8 - k*((length-16)/9)); world.add(post);
+      }
+    });
+  }
+
   const sceneryEvents = [
     {s:170,  fn:()=>addSwitchAndBranch(-170,1)},
     {s:250,  fn:()=>addLevelCrossing(-250)},
@@ -6073,6 +6209,7 @@
     {s:3480, fn:()=>addCurvedTrackGuide(-3480,310,1)},
     {s:3760, fn:()=>{addStation(-3760,190,'local'); addStationDetailSet(-3760,190,'local');}},
     {s:RURAL_TUNNEL_S, fn:()=>addRuralTunnel(-RURAL_TUNNEL_S, RURAL_TUNNEL_LENGTH)},
+    {s:RURAL_TUNNEL_S + RURAL_TUNNEL_LENGTH + 56, fn:()=>addIndustrialPark(-(RURAL_TUNNEL_S + RURAL_TUNNEL_LENGTH + 56), 180)},
     {s:4560, fn:()=>addLevelCrossing(-4560)},
     {s:4680, fn:()=>addTrussRailBridge(-4680,120)}
   ];
@@ -6139,6 +6276,7 @@
     });
   }
   updateSceneryChunks(0);
+  initMovingPassingTrains();
 
   // ルートデータ：今後ここに街並み・駅・信号・カーブ・制限速度を追加して拡張できます。
   // s = 起点からの距離(m)。ATSは警告のみで、強制減速・強制停止はしません。
@@ -6412,6 +6550,7 @@
         advanceToNextStop();
       }
       updateSceneryChunks(routeS);
+      updateMovingPassingTrains(dt);
       world.position.z = routeS;
       // no short visual loop: the route is long and scenery changes by zone
       // fixed viewpoint, only slight natural vibration
