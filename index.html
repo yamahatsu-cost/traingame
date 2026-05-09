@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width,initial-scale=1.0,maximum-scale=1.0,user-scalable=no" />
-<title>電車運転シミュレーター トンネル植生・低層ビル増設版</title>
+<title>電車運転シミュレーター 都会駅ビル再追加版</title>
 <style>
   :root{
     --panel:#090b0d;
@@ -1675,7 +1675,7 @@
       const base = g.createLinearGradient(0,0,0,c.height);
       base.addColorStop(0,'#dbd8d1'); base.addColorStop(.68,'#c8c3ba'); base.addColorStop(1,'#b2aa9e');
       g.fillStyle = base; g.fillRect(0,0,c.width,c.height);
-      for(let i=0;i<9;i++){
+      for(let i=0;i<11;i++){
         const x = 56 + i*102;
         g.fillStyle = '#6b6358'; g.fillRect(x,0,14,c.height);
       }
@@ -3172,6 +3172,9 @@
     const inRuralTunnel = isInsideRuralTunnelS(routeZ);
     const inCityTunnel = isInsideCityTunnelS(routeZ);
     const nearCityTunnel = isNearCityTunnelS(routeZ, 100);
+    const inIndustrialPark = isIndustrialParkS(routeZ, 28);
+    const nearIndoorStation = isNearIndoorStationS(routeZ, 165);
+    const nearStationArea = isNearStationAreaS(routeZ, 125);
     let zone = 'town';
     if(routeZ < 180) zone = 'city';
     else if(routeZ < 360) zone = 'residential';
@@ -3182,6 +3185,7 @@
     else if(routeZ < 3200) zone = 'residential';
     else if(routeZ < 4300) zone = 'rural';
     else zone = 'mountain';
+    if(inIndustrialPark) zone = 'industrial';
 
     // 遠い背景：街中はビル群、田舎・山間部は山並みを描写する
     addDistantBackground(z, zone);
@@ -3225,7 +3229,7 @@
       if(inRuralTunnel) return;
       // 田舎ほど木を多くし、昔風の民家・畑・草むらを線路沿いに配置
       [-1,1].forEach(side=>{
-        addRuralTreeMass(side,z,zone==='mountain'?10:7);
+        if(!nearStationArea) addRuralTreeMass(side,z,zone==='mountain'?10:7);
         if(Math.random()<.82) addOldRuralHouse(side,z-7+Math.random()*14, zone==='mountain'?0.86:1.0);
         if(Math.random()<.95) addRiceField(side,z, true);
         const ruralPoleChance = aheadDist > 540 ? .18 : aheadDist > 300 ? .38 : .72;
@@ -3236,22 +3240,30 @@
       return;
     }
 
+    if(zone==='industrial'){
+      // 田舎工業団地では民家や一般建物を重ねず、工場群だけを見せる。
+      return;
+    }
+
     if(!nearCityTunnel && (zone==='suburb' || zone==='residential' || zone==='city')){
-      // 線路脇の雑草・植栽
-      for(let g=0;g<(zone==='city'?2:5);g++){
-        const grass = new THREE.Mesh(new THREE.BoxGeometry(.55+Math.random()*.8,.035,1.0+Math.random()*1.6), mat.grass);
-        grass.position.set((Math.random()<.5?-1:1)*(2.6+Math.random()*2.2),.04,z-14+Math.random()*28);
-        world.add(grass);
-      }
-      // 街路樹：球体だけの不自然な木ではなく、幹・枝・葉房を持つ並木にする
-      if(Math.random()<.90){
-        [-1,1].forEach(side=>{
-          if(Math.random()<.82){
-            const treeX = side*(7.2+Math.random()*1.3);
-            const treeZ = z-13+Math.random()*26;
-            addRealisticTree(treeX, treeZ, .88 + Math.random()*.28, side);
-          }
-        });
+      // 屋内駅の周辺は樹木を置かず、舗装主体のモダンな駅前にする
+      if(!nearIndoorStation){
+        // 線路脇の雑草・植栽
+        for(let g=0;g<(zone==='city'?2:5);g++){
+          const grass = new THREE.Mesh(new THREE.BoxGeometry(.55+Math.random()*.8,.035,1.0+Math.random()*1.6), mat.grass);
+          grass.position.set((Math.random()<.5?-1:1)*(2.6+Math.random()*2.2),.04,z-14+Math.random()*28);
+          world.add(grass);
+        }
+        // 街路樹：球体だけの不自然な木ではなく、幹・枝・葉房を持つ並木にする
+        if(!nearStationArea && Math.random()<.90){
+          [-1,1].forEach(side=>{
+            if(Math.random()<.82){
+              const treeX = side*(7.2+Math.random()*1.3);
+              const treeZ = z-13+Math.random()*26;
+              addRealisticTree(treeX, treeZ, .88 + Math.random()*.28, side);
+            }
+          });
+        }
       }
     }
 
@@ -3264,7 +3276,7 @@
         for(let j=0;j<lowCount;j++){
           if(Math.random() < (zone==='city' ? .55 : zone==='station' ? .34 : zone==='elevated' ? .42 : zone==='residential' ? .45 : zone==='suburb' ? .38 : .40)) addLowRiseInfillBuilding(side, z - 18 + j*20 + Math.random()*10, zone);
         }
-        if(zone==='suburb' || zone==='residential'){
+        if((zone==='suburb' || zone==='residential') && !nearIndoorStation && !nearStationArea){
           addTree(side,z,1.15);
           if(Math.random()<.6) addTree(side,z+10,.9);
         }
@@ -3732,13 +3744,13 @@
   };
 
   const stationMats = {
-    platformLocal: new THREE.MeshStandardMaterial({map:stationTextures.platformLocal, roughness:.88, metalness:.02}),
+    platformLocal: new THREE.MeshStandardMaterial({map:stationTextures.platformLocal, roughness:.82, metalness:.02, emissive:0x201912, emissiveIntensity:.09}),
     platformSubway: new THREE.MeshStandardMaterial({map:stationTextures.platformSubway, roughness:.86, metalness:.02}),
     platformTerminal: new THREE.MeshStandardMaterial({map:stationTextures.platformTerminal, roughness:.84, metalness:.02}),
-    roofLocal: new THREE.MeshStandardMaterial({map:stationTextures.roofLocal, roughness:.72, metalness:.10}),
+    roofLocal: new THREE.MeshStandardMaterial({map:stationTextures.roofLocal, roughness:.68, metalness:.10, emissive:0x111315, emissiveIntensity:.14}),
     roofSubway: new THREE.MeshStandardMaterial({map:stationTextures.roofSubway, roughness:.68, metalness:.16}),
     roofTerminal: new THREE.MeshStandardMaterial({map:stationTextures.roofTerminal, roughness:.64, metalness:.14}),
-    wallLocal: new THREE.MeshStandardMaterial({map:stationTextures.wallLocal, roughness:.86, metalness:.02}),
+    wallLocal: new THREE.MeshStandardMaterial({map:stationTextures.wallLocal, roughness:.80, metalness:.02, emissive:0x16120d, emissiveIntensity:.08}),
     wallSubway: new THREE.MeshStandardMaterial({map:stationTextures.wallSubway, roughness:.72, metalness:.08}),
     gateLocal: new THREE.MeshStandardMaterial({map:stationTextures.gateLocal, roughness:.72, metalness:.02}),
     gateSubway: new THREE.MeshStandardMaterial({map:stationTextures.gateSubway, roughness:.68, metalness:.04}),
@@ -4217,6 +4229,26 @@
 
   const movingPassingTrains = [];
 
+  function collectGroupMaterials(group){
+    const mats = [];
+    group.traverse(obj=>{
+      if(!obj.material) return;
+      const list = Array.isArray(obj.material) ? obj.material : [obj.material];
+      list.forEach(mat=>{
+        if(!mat || mats.includes(mat)) return;
+        if(mat.userData.baseOpacity == null) mat.userData.baseOpacity = (mat.opacity == null ? 1 : mat.opacity);
+        mat.transparent = true;
+        mats.push(mat);
+      });
+    });
+    return mats;
+  }
+
+  function setGroupOpacity(group, opacity){
+    const mats = group.userData.fadeMaterials || [];
+    mats.forEach(mat=>{ mat.opacity = (mat.userData.baseOpacity == null ? 1 : mat.userData.baseOpacity) * opacity; });
+  }
+
   function createPassingTrain(side=1, stripe='green'){
     const group = new THREE.Group();
     const trackX = side * 3.4;
@@ -4289,34 +4321,45 @@
 
   function findSafePassingTrainSpawn(s){
     let safe = s;
-    for(let i=0;i<20 && isInPassingTrainBlockedRange(safe, 120); i++) safe += 240;
+    for(let i=0;i<20 && isInPassingTrainBlockedRange(safe, 160); i++) safe += 280;
     return safe;
   }
 
   function addMovingPassingTrain({startS=900, speedKmh=60, side=1, stripe='green', respawnGap=1500} = {}){
     const group = createPassingTrain(side, stripe);
+    group.userData.fadeMaterials = collectGroupMaterials(group);
     const safeStart = findSafePassingTrainSpawn(startS);
     group.position.z = -safeStart;
+    setGroupOpacity(group, 0);
     world.add(group);
     movingPassingTrains.push({group, s:safeStart, speedKmh, respawnGap, side, stripe});
   }
 
   function initMovingPassingTrains(){
     if(movingPassingTrains.length) return;
-    addMovingPassingTrain({startS: 920,  speedKmh: 58, side: 1, stripe: 'yellow', respawnGap: 1500});
-    addMovingPassingTrain({startS: 2380, speedKmh: 66, side: 1, stripe: 'red',    respawnGap: 1850});
+    addMovingPassingTrain({startS: 1220, speedKmh: 58, side: 1, stripe: 'yellow', respawnGap: 1650});
+    addMovingPassingTrain({startS: 2760, speedKmh: 66, side: 1, stripe: 'red',    respawnGap: 2050});
   }
 
   function updateMovingPassingTrains(dt){
     if(!movingPassingTrains.length) return;
     const recycleBehind = Math.max(0, routeS - 140);
-    const baseAhead = routeS + Math.max(1200, SCENERY_FORWARD_DISTANCE * 0.82);
+    const visibleAhead = Math.max(1680, SCENERY_FORWARD_DISTANCE * 1.28);
+    const baseAhead = routeS + visibleAhead + 260;
     movingPassingTrains.forEach((train, idx)=>{
       train.s -= train.speedKmh * dt * .62;
       if(train.s < recycleBehind){
-        train.s = findSafePassingTrainSpawn(baseAhead + idx*220 + Math.random()*180 + train.respawnGap);
+        train.s = findSafePassingTrainSpawn(baseAhead + idx*280 + Math.random()*220 + train.respawnGap);
       }
-      train.group.visible = !isInPassingTrainBlockedRange(train.s, 70);
+      const distAhead = train.s - routeS;
+      let fade = 0;
+      if(distAhead > -120 && distAhead < visibleAhead){
+        const fadeIn = THREE.MathUtils.clamp((distAhead - 90) / 180, 0, 1);
+        const fadeOut = THREE.MathUtils.clamp((visibleAhead - distAhead) / 260, 0, 1);
+        fade = Math.min(fadeIn, fadeOut);
+      }
+      train.group.visible = fade > .01;
+      setGroupOpacity(train.group, train.group.visible ? fade : 0);
       train.group.position.z = -train.s;
     });
   }
@@ -4583,9 +4626,25 @@
     }
   }
 
+
+  let indoorPlatformWallMat = null;
+  function getIndoorPlatformWallMat(){
+    if(!indoorPlatformWallMat){
+      indoorPlatformWallMat = new THREE.MeshStandardMaterial({
+        color:0xefe4d2,
+        roughness:.58,
+        metalness:.02,
+        emissive:0x20180f,
+        emissiveIntensity:.08
+      });
+      indoorPlatformWallMat.userData.sharedMaterial = true;
+    }
+    return indoorPlatformWallMat;
+  }
+
   function addPlatformAccessories(side,zStart,length,variant){
     // 柱・梁・案内板は屋根テクスチャに焼き込み、ベンチ等のみ最小限残す
-    const benchCount = variant==='terminal' ? 3 : 2;
+    const benchCount = (variant==='terminal' || variant==='indoor') ? 3 : 2;
     for(let i=0;i<benchCount;i++){
       const z = zStart-30-i*(length-64)/Math.max(1,benchCount-1);
       const bench = new THREE.Mesh(new THREE.BoxGeometry(1.20,.25,.36), stationMats.bench);
@@ -4600,12 +4659,15 @@
     // 停止位置はホーム入口側ではなく、進行方向のホーム奥側（最先端）へ配置
     const stopZ = zStart - length + 12;
     addStopPositionMarker(stopZ, 1);
-    const roofHigh = variant==='terminal' ? 3.7 : variant==='subway' ? 3.35 : 3.15;
-    const platformW = variant==='terminal' ? 3.4 : 2.6;
-    const roofW = variant==='terminal' ? 4.7 : variant==='subway' ? 4.2 : 3.3;
-    const platformMat = variant==='subway' ? stationMats.platformSubway : variant==='terminal' ? stationMats.platformTerminal : stationMats.platformLocal;
-    const roofMat = variant==='subway' ? stationMats.roofSubway : variant==='terminal' ? stationMats.roofTerminal : stationMats.roofLocal;
-    const wallMat = variant==='subway' ? stationMats.wallSubway : stationMats.wallLocal;
+    const isIndoor = variant === 'indoor';
+    const isTerminalStyle = variant === 'terminal' || isIndoor;
+    const isSubway = variant === 'subway';
+    const roofHigh = isIndoor ? 4.05 : isTerminalStyle ? 3.7 : isSubway ? 3.35 : 3.15;
+    const platformW = isIndoor ? 3.2 : isTerminalStyle ? 3.4 : 2.6;
+    const roofW = isIndoor ? 4.9 : isTerminalStyle ? 4.7 : isSubway ? 4.2 : 3.3;
+    const platformMat = isSubway ? stationMats.platformSubway : isTerminalStyle ? stationMats.platformTerminal : stationMats.platformLocal;
+    const roofMat = isSubway ? stationMats.roofSubway : isTerminalStyle ? stationMats.roofTerminal : stationMats.roofLocal;
+    const wallMat = isIndoor ? getIndoorPlatformWallMat() : isSubway ? stationMats.wallSubway : stationMats.wallLocal;
 
     [-1,1].forEach(side=>{
       const platform = new THREE.Mesh(new THREE.BoxGeometry(platformW,.55,length), platformMat);
@@ -4616,36 +4678,49 @@
       const whiteLine = new THREE.Mesh(new THREE.BoxGeometry(.08,.09,length*.92), new THREE.MeshStandardMaterial({color:0xe2e2dc,roughness:.8}));
       whiteLine.position.set(side*4.98,.64,zMid); world.add(whiteLine);
 
-      const wallH = variant==='subway' ? 2.4 : 1.25;
+      const wallH = isSubway ? 2.4 : isIndoor ? 2.0 : 1.25;
       const wall = new THREE.Mesh(new THREE.BoxGeometry(.22,wallH,length), wallMat);
       wall.position.set(side*7.55,wallH/2+.35,zMid); world.add(wall);
 
-      if(variant==='subway'){
+      if(isSubway){
         const ceiling=new THREE.Mesh(new THREE.BoxGeometry(6.2,.18,length), roofMat);
         ceiling.position.set(side*6.05,3.55,zMid); world.add(ceiling);
         for(let i=0;i<4;i++){
           const light = new THREE.Mesh(new THREE.BoxGeometry(.16,.05,12.5), new THREE.MeshBasicMaterial({color:0xf7f4d0}));
           light.position.set(side*5.35,3.42,zStart-24-i*(length-48)/3); world.add(light);
         }
+      }else if(isIndoor){
+        const roof=new THREE.Mesh(new THREE.BoxGeometry(roofW,.18,length*.96), roofMat);
+        roof.position.set(side*6.12,roofHigh,zMid);
+        world.add(roof);
+        const ceiling = new THREE.Mesh(new THREE.BoxGeometry(roofW-.34,.10,length*.92), new THREE.MeshStandardMaterial({color:0xe7e8e2, roughness:.82, metalness:.03}));
+        ceiling.position.set(side*6.03,roofHigh-.28,zMid);
+        world.add(ceiling);
+        const platformLightMat = new THREE.MeshBasicMaterial({color:0xfff9de, transparent:true, opacity:.88, depthWrite:false});
+        markSharedMaterial(platformLightMat);
+        for(let i=0;i<5;i++){
+          const light = new THREE.Mesh(new THREE.BoxGeometry(2.8,.06,13.6), platformLightMat);
+          light.position.set(side*6.02,roofHigh-.16,zStart-24-i*(length-48)/4); world.add(light);
+        }
       }else{
         const roof=new THREE.Mesh(new THREE.BoxGeometry(roofW,.16,length*.9), roofMat);
         roof.position.set(side*6.15,roofHigh,zMid);
-        roof.rotation.z=side*(variant==='terminal' ? .08 : .04);
+        roof.rotation.z=side*(isTerminalStyle ? .08 : .04);
         world.add(roof);
       }
 
       // ホーム屋根の柱は、太すぎず少なすぎない本数に微調整する
-      const colCount = variant==='terminal' ? 7 : variant==='subway' ? 6 : 6;
+      const colCount = isTerminalStyle ? 7 : isSubway ? 6 : 6;
       const colMat = new THREE.MeshStandardMaterial({color:0xc7cbc9, roughness:.88, metalness:.04});
-      const colH = variant==='subway' ? 2.8 : roofHigh - 0.62;
-      const innerColSize = variant==='terminal' ? .15 : .12;
-      const outerColSize = variant==='terminal' ? .13 : .11;
+      const colH = isSubway ? 2.8 : roofHigh - 0.62;
+      const innerColSize = isTerminalStyle ? .15 : .12;
+      const outerColSize = isTerminalStyle ? .13 : .11;
       for(let i=0;i<colCount;i++){
         const cz = zStart - 16 - i*((length-32)/(colCount-1));
         const innerCol = new THREE.Mesh(new THREE.BoxGeometry(innerColSize,colH,innerColSize), colMat);
         innerCol.position.set(side*5.24, .64 + colH/2, cz);
         world.add(innerCol);
-        if(variant==='terminal'){
+        if(isTerminalStyle){
           const outerCol = new THREE.Mesh(new THREE.BoxGeometry(outerColSize,colH,outerColSize), colMat);
           outerCol.position.set(side*7.02, .64 + colH/2, cz+0.8);
           world.add(outerCol);
@@ -4663,16 +4738,16 @@
 
     // 駅の上空通路（高架橋）をテクスチャ主体で追加
     const skybridgeMats = getStationSkybridgeMaterials();
-    const bridgeZs = variant==='terminal' ? [zStart-64, zStart-120] : [zStart-86];
+    const bridgeZs = isIndoor ? [zStart-62, zStart-136] : variant==='terminal' ? [zStart-64, zStart-120] : [zStart-86];
     bridgeZs.forEach((bz, bi)=>{
-      const span = variant==='subway' ? 18.8 : variant==='terminal' ? 20.6 : 17.4;
+      const span = isSubway ? 18.8 : isTerminalStyle ? 20.6 : 17.4;
       const bridge = new THREE.Mesh(new THREE.BoxGeometry(span, 2.15, 4.6), [skybridgeMats.portal, skybridgeMats.portal, skybridgeMats.roof, skybridgeMats.floor, skybridgeMats.side, skybridgeMats.side]);
       bridge.position.set(0, 6.15, bz); world.add(bridge);
       [-1,1].forEach(side=>{
         const col = new THREE.Mesh(new THREE.BoxGeometry(.9,5.2,.9), mat.concrete);
         col.position.set(side*(span*.38), 2.6, bz); world.add(col);
         const stairBlock = new THREE.Mesh(new THREE.BoxGeometry(2.2,1.9,3.2), stationMats.stair);
-        stairBlock.position.set(side*(8.8 + (variant==='terminal'?1.1:0)), 3.0, bz + (bi%2===0 ? 3.3 : -3.3));
+        stairBlock.position.set(side*(8.8 + (isTerminalStyle?1.1:0)), 3.0, bz + (bi%2===0 ? 3.3 : -3.3));
         stairBlock.rotation.y = side>0 ? Math.PI : 0;
         world.add(stairBlock);
       });
@@ -4680,7 +4755,10 @@
 
     // 屋根下の柱・梁・待客・案内板はテクスチャへ焼き込み、駅を軽量に見せる
 
+    if(variant==='terminal') addUrbanStationMallBuilding(zStart, length);
+    if(isIndoor) addIndoorStationBuilding(zStart, length);
     if(variant==='terminal') addTrainOnOppositeTrack(zStart-55,length,1,'green');
+    if(isIndoor) addTrainOnOppositeTrack(zStart-58,length,1,'green');
     if(variant==='local'){
       const localStripe = (Math.abs(Math.round(zStart/10)) % 3 === 0) ? 'red' : 'yellow';
       addTrainOnOppositeTrack(zStart-55,length,1,localStripe);
@@ -4742,9 +4820,9 @@
   }
 
   function addStationDetailSet(zStart,length,variant){
-    const doorKind = variant==='subway' ? 'subway' : 'local';
+    const doorKind = (variant==='subway' || variant==='indoor') ? 'subway' : 'local';
     // 地上駅では一部ホームドアなし駅を混ぜる
-    const hasDoors = (variant==='subway') || ((Math.abs(Math.round(zStart/10)) % 3) !== 0);
+    const hasDoors = (variant==='subway' || variant==='indoor') || ((Math.abs(Math.round(zStart/10)) % 3) !== 0);
     [-1,1].forEach(side=>{
       const runLength = length - 26;
       if(hasDoors){
@@ -4775,6 +4853,14 @@
       stair.position.set(side*7.0,1.45,zStart-length*.56); stair.rotation.z=side*.45; world.add(stair);
       const vend = new THREE.Mesh(new THREE.BoxGeometry(.65,1.45,.48), stationMats.poster);
       vend.position.set(side*6.75,1.35,zStart-length*.33); world.add(vend);
+      if(variant==='indoor'){
+        const railMat = new THREE.MeshStandardMaterial({color:0xb9c8d0, roughness:.16, metalness:.12, transparent:true, opacity:.42});
+        const capMat = new THREE.MeshStandardMaterial({color:0x9ea7ad, roughness:.46, metalness:.14});
+        const glassRail = new THREE.Mesh(new THREE.BoxGeometry(.08,.72,runLength*.72), railMat);
+        glassRail.position.set(side*6.92,1.24,zStart - length/2); world.add(glassRail);
+        const glassCap = new THREE.Mesh(new THREE.BoxGeometry(.10,.06,runLength*.72), capMat);
+        glassCap.position.set(side*6.92,1.62,zStart - length/2); world.add(glassCap);
+      }
     });
   }
 
@@ -4782,6 +4868,18 @@
   const CITY_TUNNEL_LENGTH = 72;
   const RURAL_TUNNEL_S = 4060;
   const RURAL_TUNNEL_LENGTH = 156;
+  const INDUSTRIAL_PARK_S = RURAL_TUNNEL_S + RURAL_TUNNEL_LENGTH + 56;
+  const INDUSTRIAL_PARK_LENGTH = 180;
+  const INDOOR_STATION_S = 2680;
+  const INDOOR_STATION_LENGTH = 250;
+  const stationAreaRanges = [
+    {start: 390, end: 390 + 210},
+    {start: 820, end: 820 + 240},
+    {start: 1280, end: 1280 + 210},
+    {start: 2380, end: 2380 + 230},
+    {start: INDOOR_STATION_S, end: INDOOR_STATION_S + INDOOR_STATION_LENGTH},
+    {start: 3760, end: 3760 + 190}
+  ];
 
   let tunnelBrickTex = null;
   let tunnelConcreteTex = null;
@@ -4804,6 +4902,15 @@
   }
   function isInsideRuralTunnelS(s){
     return s >= RURAL_TUNNEL_S && s <= RURAL_TUNNEL_S + RURAL_TUNNEL_LENGTH;
+  }
+  function isIndustrialParkS(s, margin=36){
+    return s >= INDUSTRIAL_PARK_S - margin && s <= INDUSTRIAL_PARK_S + INDUSTRIAL_PARK_LENGTH + margin;
+  }
+  function isNearIndoorStationS(s, margin=170){
+    return s >= INDOOR_STATION_S - margin && s <= INDOOR_STATION_S + INDOOR_STATION_LENGTH + margin;
+  }
+  function isNearStationAreaS(s, margin=110){
+    return stationAreaRanges.some(r => s >= r.start - margin && s <= r.end + margin);
   }
 
   function makeTunnelBrickTexture(){
@@ -5512,6 +5619,285 @@
     };
   }
 
+
+  let urbanStationMallTex = null;
+  let urbanStationGateTex = null;
+
+  function makeUrbanStationMallTexture(kind='facade'){
+    const W = kind==='gate' ? 1024 : 768;
+    const H = 512;
+    const c = document.createElement('canvas'); c.width = W; c.height = H;
+    const g = c.getContext('2d');
+    let seed = kind==='gate' ? 246813 : 135724;
+    const rnd = () => {
+      seed += 0x6D2B79F5;
+      let t = seed;
+      t = Math.imul(t ^ (t >>> 15), t | 1);
+      t ^= t + Math.imul(t ^ (t >>> 7), t | 61);
+      return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+    };
+
+    const wall = g.createLinearGradient(0,0,0,H);
+    wall.addColorStop(0,'#f0f3f4');
+    wall.addColorStop(.50,'#cfd7da');
+    wall.addColorStop(1,'#aeb7bb');
+    g.fillStyle = wall; g.fillRect(0,0,W,H);
+
+    // 駅ビルらしいガラス帯と商業施設の横長サインをテクスチャに焼き込む
+    const floorH = kind==='gate' ? 86 : 76;
+    for(let y=28; y<H-34; y+=floorH){
+      g.fillStyle = 'rgba(255,255,255,.74)'; g.fillRect(0,y,W,3);
+      g.fillStyle = 'rgba(0,0,0,.13)'; g.fillRect(0,y+floorH-8,W,5);
+      for(let x=20; x<W-18; x+=kind==='gate' ? 72 : 58){
+        const ww = (kind==='gate' ? 48 : 38) + rnd()*10;
+        const wh = floorH*.46;
+        const gy = y+14+rnd()*4;
+        const glass = g.createLinearGradient(x,gy,x+ww,gy+wh);
+        glass.addColorStop(0,'rgba(110,168,198,.74)');
+        glass.addColorStop(.52,'rgba(214,241,250,.58)');
+        glass.addColorStop(1,'rgba(64,116,148,.68)');
+        g.fillStyle = 'rgba(18,30,38,.44)'; g.fillRect(x-2,gy-2,ww+4,wh+4);
+        g.fillStyle = glass; g.fillRect(x,gy,ww,wh);
+        g.strokeStyle = 'rgba(248,250,252,.64)';
+        g.lineWidth = 1.5;
+        g.strokeRect(x+.75,gy+.75,ww-1.5,wh-1.5);
+        g.fillStyle = 'rgba(255,255,255,.34)'; g.fillRect(x+3,gy+4,ww*.24,wh-8);
+        // 窓の縦横フレームを細かく入れて駅ビル外観の密度を上げる
+        g.fillStyle = 'rgba(246,248,250,.62)';
+        g.fillRect(x+ww*.32, gy, 2.5, wh);
+        g.fillRect(x+ww*.66, gy, 2.5, wh);
+        g.fillRect(x, gy+wh*.50, ww, 2.5);
+        g.fillStyle = 'rgba(10,18,22,.22)';
+        g.fillRect(x+ww*.11, gy+wh*.86, ww*.78, 2.2);
+        if(rnd()<.26){
+          g.fillStyle = 'rgba(255,226,142,.58)';
+          g.fillRect(x+ww*.55,gy+5,ww*.20,wh-10);
+        }
+      }
+      // 縦のマリオンや化粧柱
+      g.fillStyle = 'rgba(116,126,130,.34)';
+      for(let mx=0; mx<W; mx+=(kind==='gate' ? 86 : 74)) g.fillRect(mx+10,y-12,6,floorH+18);
+    }
+
+    // 1階の店舗・改札フロア。文字は描かず、駅ビルの看板風の色面にする
+    g.fillStyle = 'rgba(52,58,62,.92)'; g.fillRect(0,H-94,W,94);
+    for(let x=18; x<W-30; x+=112){
+      const signCols = ['#1d66a7','#2d8a72','#c08a2b','#7d5aa6'];
+      g.fillStyle = signCols[Math.floor(rnd()*signCols.length)];
+      g.fillRect(x,H-78,72+rnd()*22,18);
+      g.fillStyle = 'rgba(245,248,250,.84)'; g.fillRect(x+7,H-72,40+rnd()*16,5);
+      g.fillStyle = 'rgba(190,225,240,.64)'; g.fillRect(x+3,H-48,82,30);
+      g.fillStyle = 'rgba(0,0,0,.20)'; g.fillRect(x+42,H-48,2,30);
+      // ショーウィンドウやフレームを追加
+      g.strokeStyle = 'rgba(234,239,242,.42)';
+      g.lineWidth = 2;
+      g.strokeRect(x+2,H-49,84,31);
+    }
+    for(let x=0; x<W; x+=46){
+      g.fillStyle = 'rgba(255,255,255,.10)';
+      g.fillRect(x,H-94,2,94);
+    }
+
+    if(kind==='gate'){
+      // 線路の上をまたぐ正面入口風：中央を暗くして「中に入る」印象を出す
+      const dark = g.createRadialGradient(W/2,H*.62,20,W/2,H*.62,W*.36);
+      dark.addColorStop(0,'rgba(5,9,12,.72)');
+      dark.addColorStop(.45,'rgba(20,30,38,.42)');
+      dark.addColorStop(1,'rgba(20,30,38,0)');
+      g.fillStyle = dark;
+      g.fillRect(W*.22,H*.35,W*.56,H*.50);
+      g.strokeStyle = 'rgba(255,255,255,.58)'; g.lineWidth = 8;
+      g.strokeRect(W*.24,H*.28,W*.52,H*.54);
+      for(let x=W*.30; x<W*.72; x+=64){
+        g.strokeStyle='rgba(238,244,246,.48)'; g.lineWidth=4;
+        g.beginPath(); g.moveTo(x,H*.30); g.lineTo(x+36,H*.80); g.stroke();
+      }
+    }
+
+    // 汚れ・影・反射を少し足して板っぽさを減らす
+    for(let i=0;i<36;i++){
+      const x = rnd()*W, y = 20+rnd()*(H-60), len = 24+rnd()*90;
+      const stain = g.createLinearGradient(0,y,0,y+len);
+      stain.addColorStop(0,'rgba(80,82,78,0)');
+      stain.addColorStop(.45,'rgba(80,82,78,.08)');
+      stain.addColorStop(1,'rgba(80,82,78,0)');
+      g.fillStyle = stain; g.fillRect(x,y,1+rnd()*3,len);
+    }
+    const shade = g.createLinearGradient(0,0,W,0);
+    shade.addColorStop(0,'rgba(255,255,255,.12)');
+    shade.addColorStop(.62,'rgba(255,255,255,0)');
+    shade.addColorStop(1,'rgba(0,0,0,.24)');
+    g.fillStyle = shade; g.fillRect(0,0,W,H);
+
+    const tex = new THREE.CanvasTexture(c);
+    tex.wrapS = tex.wrapT = THREE.RepeatWrapping;
+    tex.minFilter = THREE.LinearMipmapLinearFilter;
+    tex.magFilter = THREE.LinearFilter;
+    tex.generateMipmaps = true;
+    tex.anisotropy = Math.min(4, renderer.capabilities.getMaxAnisotropy ? renderer.capabilities.getMaxAnisotropy() : 1);
+    tex.userData.sharedTexture = true;
+    tex.needsUpdate = true;
+    return tex;
+  }
+
+  function getUrbanStationMallMaterials(){
+    if(!urbanStationMallTex) urbanStationMallTex = makeUrbanStationMallTexture('facade');
+    if(!urbanStationGateTex) urbanStationGateTex = makeUrbanStationMallTexture('gate');
+    const mats = {
+      facade: new THREE.MeshStandardMaterial({map:urbanStationMallTex, roughness:.72, metalness:.05}),
+      gate: new THREE.MeshStandardMaterial({map:urbanStationGateTex, roughness:.70, metalness:.06}),
+      roof: new THREE.MeshStandardMaterial({color:0xc9d0d3, roughness:.82, metalness:.04}),
+      shadow: new THREE.MeshBasicMaterial({color:0x11181e, transparent:true, opacity:.42, depthWrite:false})
+    };
+    Object.values(mats).forEach(markSharedMaterial);
+    return mats;
+  }
+
+  function addUrbanStationMallBuilding(zStart, length=240){
+    // 都会駅ビル復活：2〜4階建ての商業駅ビルの中へ線路が入っていく見え方にする。
+    // 窓・店舗・改札階はCanvasTextureへ焼き込み、Mesh数は増やしすぎない。
+    const mats = getUrbanStationMallMaterials();
+    const zMid = zStart - length/2;
+    const mallLen = Math.min(length*.72, 176);
+    const mallMid = zStart - length*.48;
+
+    [-1,1].forEach(side=>{
+      const h = side > 0 ? 10.4 : 8.6;
+      const w = side > 0 ? 5.8 : 5.2;
+      const d = mallLen;
+      const main = new THREE.Mesh(new THREE.BoxGeometry(w,h,d), mats.facade);
+      main.position.set(side*10.9, h/2 + .08, mallMid);
+      main.rotation.y = side * .012;
+      main.castShadow = true;
+      main.receiveShadow = true;
+      world.add(main);
+
+      // 低めの別棟を少し前後にずらし、駅ビルが連続して見えるようにする
+      const subH = side > 0 ? 6.4 : 7.4;
+      const sub = new THREE.Mesh(new THREE.BoxGeometry(4.8, subH, mallLen*.58), mats.facade);
+      sub.position.set(side*15.4, subH/2 + .05, mallMid - side*4);
+      sub.rotation.y = side * .03;
+      world.add(sub);
+
+      const canopy = new THREE.Mesh(new THREE.BoxGeometry(7.9,.32,mallLen*.78), mats.roof);
+      canopy.position.set(side*7.95,4.25,mallMid);
+      canopy.rotation.z = side*.03;
+      world.add(canopy);
+
+      // 駅ビルの床下影。線路側が少し暗くなり、建物内に入る感じを強める
+      const shadow = new THREE.Mesh(new THREE.PlaneGeometry(mallLen*.80, 5.2), mats.shadow);
+      shadow.position.set(side*6.15, .72, mallMid);
+      shadow.rotation.x = -Math.PI/2;
+      shadow.rotation.z = Math.PI/2;
+      shadow.renderOrder = 4;
+      world.add(shadow);
+    });
+
+    // 線路をまたぐ駅ビル正面ゲートを2か所配置。中央の開口は塞がず、上部と左右だけで表現する。
+    [zStart-54, zStart-118].forEach((gz,idx)=>{
+      const top = new THREE.Mesh(new THREE.BoxGeometry(20.8, 2.2, 5.2), mats.gate);
+      top.position.set(0, 8.2 + idx*.2, gz);
+      world.add(top);
+      [-1,1].forEach(side=>{
+        const col = new THREE.Mesh(new THREE.BoxGeometry(1.65, 7.4, 4.8), mats.gate);
+        col.position.set(side*9.7, 4.0, gz);
+        world.add(col);
+      });
+      const roof = new THREE.Mesh(new THREE.BoxGeometry(22.2,.36,5.8), mats.roof);
+      roof.position.set(0,9.45 + idx*.2,gz);
+      world.add(roof);
+    });
+
+    // 建物内の照明っぽい薄い光の帯。夜景ではなく日中でも「屋内へ入る」雰囲気だけ足す。
+    const lightMat = new THREE.MeshBasicMaterial({color:0xfff3c2, transparent:true, opacity:.42, depthWrite:false});
+    markSharedMaterial(lightMat);
+    for(let i=0;i<5;i++){
+      const lamp = new THREE.Mesh(new THREE.BoxGeometry(.12,.06,9.5), lightMat);
+      lamp.position.set(-2.8 + i*1.4,5.55,zStart-62-i*12);
+      world.add(lamp);
+    }
+  }
+
+
+  function addIndoorStationBuilding(zStart, length=250){
+    // 屋根付き駅ビルに入っていく感じの、明るい屋内ホームを持つ駅。
+    // 正面に4階建ての駅ビルを置き、その内部へ線路が続く構成にする。
+    const mats = getUrbanStationMallMaterials();
+    const zMid = zStart - length/2;
+    const hallLen = Math.min(length*.86, 212);
+    const hallMid = zStart - length*.48;
+
+    [-1,1].forEach(side=>{
+      const wing = new THREE.Mesh(new THREE.BoxGeometry(5.8, 11.8, hallLen), mats.facade);
+      wing.position.set(side*10.9, 5.92, hallMid);
+      wing.rotation.y = side*.010;
+      wing.castShadow = true; wing.receiveShadow = true;
+      world.add(wing);
+
+      const rearWing = new THREE.Mesh(new THREE.BoxGeometry(4.6, 8.8, hallLen*.42), mats.facade);
+      rearWing.position.set(side*15.5, 4.42, hallMid - side*4.0);
+      rearWing.rotation.y = side*.028;
+      rearWing.castShadow = true; rearWing.receiveShadow = true;
+      world.add(rearWing);
+    });
+
+    const hallRoof = new THREE.Mesh(new THREE.BoxGeometry(21.6,.42,hallLen), mats.roof);
+    hallRoof.position.set(0,7.78,hallMid); world.add(hallRoof);
+    const hallCeiling = new THREE.Mesh(new THREE.BoxGeometry(20.8,.18,hallLen*.98), new THREE.MeshStandardMaterial({color:0xf1f3ef, roughness:.72, metalness:.04}));
+    hallCeiling.position.set(0,7.40,hallMid); world.add(hallCeiling);
+    const interiorWallMat = new THREE.MeshStandardMaterial({color:0xf1e8da, roughness:.54, metalness:.03});
+    const sideLiningL = new THREE.Mesh(new THREE.BoxGeometry(.36,3.0,hallLen*.94), interiorWallMat);
+    sideLiningL.position.set(-7.86,4.86,hallMid); world.add(sideLiningL);
+    const sideLiningR = new THREE.Mesh(new THREE.BoxGeometry(.36,3.0,hallLen*.94), interiorWallMat);
+    sideLiningR.position.set(7.86,4.86,hallMid); world.add(sideLiningR);
+    const wallPanelMat = new THREE.MeshStandardMaterial({color:0xf7efe2, roughness:.50, metalness:.02});
+    const wallPanelL = new THREE.Mesh(new THREE.BoxGeometry(.12,2.56,hallLen*.86), wallPanelMat);
+    wallPanelL.position.set(-7.46,4.62,hallMid); world.add(wallPanelL);
+    const wallPanelR = new THREE.Mesh(new THREE.BoxGeometry(.12,2.56,hallLen*.86), wallPanelMat);
+    wallPanelR.position.set(7.46,4.62,hallMid); world.add(wallPanelR);
+    const upperBandL = new THREE.Mesh(new THREE.BoxGeometry(.55,1.55,hallLen*.98), new THREE.MeshStandardMaterial({color:0xf3eadc, roughness:.56, metalness:.03}));
+    upperBandL.position.set(-9.95,6.52,hallMid); world.add(upperBandL);
+    const upperBandR = new THREE.Mesh(new THREE.BoxGeometry(.55,1.55,hallLen*.98), new THREE.MeshStandardMaterial({color:0xf3eadc, roughness:.56, metalness:.03}));
+    upperBandR.position.set(9.95,6.52,hallMid); world.add(upperBandR);
+
+    const lightMat = new THREE.MeshBasicMaterial({color:0xfff8dc, transparent:true, opacity:.86, depthWrite:false});
+    markSharedMaterial(lightMat);
+    for(let i=0;i<9;i++){
+      const lz = zStart - 18 - i*(hallLen-36)/10;
+      const light = new THREE.Mesh(new THREE.BoxGeometry(13.8,.06,.24), lightMat);
+      light.position.set(0,7.28,lz); world.add(light);
+      const platformL = new THREE.Mesh(new THREE.BoxGeometry(3.2,.05,.18), lightMat);
+      platformL.position.set(-6.0,6.96,lz); world.add(platformL);
+      const platformR = new THREE.Mesh(new THREE.BoxGeometry(3.2,.05,.18), lightMat);
+      platformR.position.set(6.0,6.96,lz); world.add(platformR);
+    }
+
+    // 線路正面の4階建て駅ビルファサード。中央開口から建物内へ入る。
+    const frontTop = new THREE.Mesh(new THREE.BoxGeometry(26.4,3.2,6.0), mats.gate);
+    frontTop.position.set(0,10.4,zStart-9.2); world.add(frontTop);
+    const floorBand = new THREE.Mesh(new THREE.BoxGeometry(26.6,.26,6.2), mats.roof);
+    floorBand.position.set(0,7.85,zStart-9.1); world.add(floorBand);
+    [-1,1].forEach(side=>{
+      const outerCol = new THREE.Mesh(new THREE.BoxGeometry(6.8,8.2,5.9), mats.gate);
+      outerCol.position.set(side*9.8,4.18,zStart-9.2); world.add(outerCol);
+      const innerCol = new THREE.Mesh(new THREE.BoxGeometry(2.2,5.2,6.0), mats.gate);
+      innerCol.position.set(side*4.7,2.62,zStart-9.2); world.add(innerCol);
+    });
+    const portalRoof = new THREE.Mesh(new THREE.BoxGeometry(11.6,.34,7.0), mats.roof);
+    portalRoof.position.set(0,5.18,zStart-8.9); world.add(portalRoof);
+    const portalShadow = new THREE.Mesh(new THREE.PlaneGeometry(11.0,5.0), mats.shadow);
+    portalShadow.position.set(0,2.85,zStart-7.3);
+    portalShadow.rotation.x = -Math.PI/2;
+    portalShadow.renderOrder = 5;
+    world.add(portalShadow);
+
+    // 建物内へ続く明るい通路感を出す
+    for(let i=0;i<4;i++){
+      const throatLight = new THREE.Mesh(new THREE.BoxGeometry(6.8,.06,.24), lightMat);
+      throatLight.position.set(0,5.02,zStart-14-i*5.2); world.add(throatLight);
+    }
+  }
+
   function getTunnelBrickMat(){
     if(!tunnelBrickTex) tunnelBrickTex = makeTunnelBrickTexture();
     const m = new THREE.MeshStandardMaterial({map:tunnelBrickTex, roughness:.94, metalness:.02});
@@ -5772,6 +6158,56 @@
     world.add(glow);
   }
 
+
+  function addDenseTunnelPortalVegetation(zPortal, direction, slopeMat, vergeMat){
+    [-1,1].forEach(side=>{
+      const forestMainMat = direction > 0 ? getTunnelForestDarkMat() : getTunnelForestMat();
+      const forestSideMat = direction > 0 ? getTunnelForestDarkMat(.98) : getTunnelForestMat();
+
+      const lowerMound = new THREE.Mesh(new THREE.BoxGeometry(8.8,2.8,8.6), slopeMat);
+      lowerMound.position.set(side*14.4, 2.05, zPortal + direction*3.0);
+      lowerMound.rotation.z = side<0 ? .20 : -.20;
+      world.add(lowerMound);
+
+      const outerMound = new THREE.Mesh(new THREE.BoxGeometry(7.2,2.4,7.6), slopeMat);
+      outerMound.position.set(side*19.2, 2.0, zPortal + direction*5.2);
+      outerMound.rotation.z = side<0 ? .18 : -.18;
+      world.add(outerMound);
+
+      const grassFoot = new THREE.Mesh(new THREE.BoxGeometry(15.6,.12,12.4), vergeMat);
+      grassFoot.position.set(side*15.4,.08,zPortal + direction*4.4);
+      world.add(grassFoot);
+
+      const lowForest = new THREE.Mesh(new THREE.PlaneGeometry(12.8, 7.0), forestMainMat);
+      lowForest.position.set(side*12.5, 4.2, zPortal + direction*2.8);
+      lowForest.rotation.y = side>0 ? -direction*Math.PI*0.36 : direction*Math.PI*0.36;
+      lowForest.renderOrder = 11;
+      world.add(lowForest);
+
+      const middleForest = new THREE.Mesh(new THREE.PlaneGeometry(15.6, 9.2), forestSideMat);
+      middleForest.position.set(side*17.0, 5.8, zPortal + direction*4.6);
+      middleForest.rotation.y = side>0 ? -direction*Math.PI*0.52 : direction*Math.PI*0.52;
+      middleForest.renderOrder = 10;
+      world.add(middleForest);
+
+      const deepForest = new THREE.Mesh(new THREE.PlaneGeometry(20.0, 11.8), forestSideMat);
+      deepForest.position.set(side*22.6, 7.2, zPortal + direction*7.0);
+      deepForest.rotation.y = side>0 ? -direction*Math.PI*0.64 : direction*Math.PI*0.64;
+      deepForest.renderOrder = 9;
+      world.add(deepForest);
+
+      for(let t=0;t<8;t++){
+        addRealisticTree(
+          side*(10.8 + t*1.45 + Math.random()*1.15),
+          zPortal + direction*(0.8 + t*1.75 + Math.random()*1.15),
+          1.08 + Math.random()*.32,
+          side,
+          'rural'
+        );
+      }
+    });
+  }
+
   function addRuralTunnel(zStart, length=RURAL_TUNNEL_LENGTH){
     addTunnelInterior(zStart, length, getTunnelBrickMat(), {lightBoost: 1.05, lampCount: 7, facilityCount: 6});
     addTunnelPortalPair(zStart, length, getTunnelPortalConcreteMat(), getTunnelPortalBrickMat(), {portalW: 18.4, portalH: 13.0, portalY: 4.95, entranceOffset:0.35, exitOffset:0.35});
@@ -5972,6 +6408,8 @@
       }
     });
 
+    addDenseTunnelPortalVegetation(zStart, 1, slopeMat, vergeMat);
+
     const exitHill = new THREE.Mesh(new THREE.PlaneGeometry(58.0, 15.4), getTunnelHillMat());
     exitHill.position.set(0,13.2,zStart - length - 7.0);
     exitHill.rotation.y = 0;
@@ -6120,6 +6558,8 @@
       }
     });
 
+    addDenseTunnelPortalVegetation(zStart - length, -1, slopeMat, vergeMat);
+
     const exitGlow = new THREE.Mesh(new THREE.PlaneGeometry(8.0,4.8), getTunnelPortalLightMat(.22));
     exitGlow.position.set(0,2.85,zStart - length + 1.0);
     exitGlow.rotation.y = Math.PI;
@@ -6131,7 +6571,7 @@
   // 現在位置の少し前〜前方だけをチャンク生成し、通過済みチャンクは削除する。
   const SCENERY_CHUNK_LENGTH = 272;
   const SCENERY_FORWARD_DISTANCE = 900;
-  const SCENERY_BACK_DISTANCE = 130;
+  const SCENERY_BACK_DISTANCE = 420;
   const sceneryChunks = new Map();
   let sceneryCurrentS = 0;
 
@@ -6372,13 +6812,14 @@
     {s:1980, fn:()=>addCurvedTrackGuide(-1980,330,-1)},
     {s:2050, fn:()=>addYardTracks(-2050)},
     {s:2380, fn:()=>{addStation(-2380,230,'local'); addStationDetailSet(-2380,230,'local');}},
+    {s:2680, fn:()=>{addStation(-2680,250,'indoor'); addStationDetailSet(-2680,250,'indoor');}},
     {s:2920, fn:()=>addSwitchAndBranch(-2920,-1)},
     {s:3050, fn:()=>addLevelCrossing(-3050)},
     {s:3180, fn:()=>addTrussRailBridge(-3180,115)},
     {s:3480, fn:()=>addCurvedTrackGuide(-3480,310,1)},
     {s:3760, fn:()=>{addStation(-3760,190,'local'); addStationDetailSet(-3760,190,'local');}},
     {s:RURAL_TUNNEL_S, fn:()=>addRuralTunnel(-RURAL_TUNNEL_S, RURAL_TUNNEL_LENGTH)},
-    {s:RURAL_TUNNEL_S + RURAL_TUNNEL_LENGTH + 56, fn:()=>addIndustrialPark(-(RURAL_TUNNEL_S + RURAL_TUNNEL_LENGTH + 56), 180)},
+    {s:INDUSTRIAL_PARK_S, fn:()=>addIndustrialPark(-INDUSTRIAL_PARK_S, INDUSTRIAL_PARK_LENGTH)},
     {s:4560, fn:()=>addLevelCrossing(-4560)},
     {s:4680, fn:()=>addTrussRailBridge(-4680,120)}
   ];
