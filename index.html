@@ -1409,18 +1409,26 @@
       });
     }
 
-    // 草・土の混ざり。線路脇が単調にならないように薄く入れる。
-    for(let i=0;i<950;i++){
+    // 線路脇の色ムラは土・油汚れ寄りにして、緑の物体に見えないようにする。
+    for(let i=0;i<520;i++){
       const side = rnd()<.5 ? 0 : 1;
-      const x = side ? W*(.82+rnd()*.17) : W*(rnd()*.18);
+      const x = side ? W*(.84+rnd()*.14) : W*(rnd()*.16);
       const y = rnd()*H;
-      const len = 6 + rnd()*26;
-      g.strokeStyle = `rgba(${45+(rnd()*35)|0},${85+(rnd()*55)|0},${35+(rnd()*25)|0},${.18+rnd()*.28})`;
-      g.lineWidth = .8 + rnd()*1.6;
+      const len = 5 + rnd()*18;
+      const shade = 56 + (rnd()*42|0);
+      g.strokeStyle = `rgba(${shade},${48+(rnd()*18|0)},${38+(rnd()*16|0)},${.10+rnd()*.16})`;
+      g.lineWidth = .7 + rnd()*1.3;
       g.beginPath();
       g.moveTo(x,y);
-      g.lineTo(x+(rnd()-.5)*10,y-len);
+      g.lineTo(x+(rnd()-.5)*8,y-len);
       g.stroke();
+    }
+    for(let i=0;i<280;i++){
+      const x = rnd()*W;
+      const y = rnd()*H;
+      const s = 4 + rnd()*11;
+      g.fillStyle = `rgba(${72+(rnd()*28|0)},${66+(rnd()*22|0)},${58+(rnd()*18|0)},${.05+rnd()*.08})`;
+      g.fillRect(x,y,s,1+rnd()*3);
     }
 
     // 微細ノイズで写真感を足す。
@@ -3781,15 +3789,15 @@
     const map = {
       // 緑＝山手風
       green: {
-        line:'#52b31a', line2:'#267011', body:'#717a80', body2:'#32393f', front:'#61c61e', dark:'#121518', family:'jr-modern'
+        line:'#52b31a', line2:'#267011', body:'#666d73', body2:'#252b30', front:'#61c61e', dark:'#121518', family:'jr-modern'
       },
       // 水色＝京浜東北風
       blue: {
-        line:'#009cde', line2:'#006f9f', body:'#717980', body2:'#323b43', front:'#00a9ee', dark:'#121518', family:'jr-modern'
+        line:'#009cde', line2:'#006f9f', body:'#666d73', body2:'#252b30', front:'#00a9ee', dark:'#121518', family:'jr-modern'
       },
       // 黄＝南武・総武風（黄色帯のJR近郊形イメージ）
       yellow:{
-        line:'#d7af10', line2:'#9a7603', body:'#717a80', body2:'#343c43', front:'#e0b915', dark:'#121518', family:'jr-modern'
+        line:'#d7af10', line2:'#9a7603', body:'#666d73', body2:'#252b30', front:'#e0b915', dark:'#121518', family:'jr-modern'
       },
       // 赤＝京急風
       red:   {
@@ -3827,17 +3835,17 @@
       g.fillStyle = 'rgba(0,0,0,.28)'; g.fillRect(0,H-32,W,32);
     } else {
       const bodyGrad = g.createLinearGradient(0,0,0,H);
-      bodyGrad.addColorStop(0.00, '#f4f7f8');
-      bodyGrad.addColorStop(0.06, '#cbd4d8');
-      bodyGrad.addColorStop(0.24, '#7f8b95');
-      bodyGrad.addColorStop(0.50, '#44515b');
-      bodyGrad.addColorStop(0.78, '#242c33');
-      bodyGrad.addColorStop(1.00, '#14191d');
+      bodyGrad.addColorStop(0.00, '#e6ebee');
+      bodyGrad.addColorStop(0.07, '#bbc4ca');
+      bodyGrad.addColorStop(0.24, '#6e7982');
+      bodyGrad.addColorStop(0.52, '#39454d');
+      bodyGrad.addColorStop(0.80, '#1f262c');
+      bodyGrad.addColorStop(1.00, '#101418');
       g.fillStyle = bodyGrad; g.fillRect(0,0,W,H);
       g.fillStyle = 'rgba(255,255,255,.30)'; g.fillRect(0,0,W,18);
       g.fillStyle = 'rgba(255,255,255,.14)'; g.fillRect(0,32,W,8);
-      g.fillStyle = 'rgba(0,0,0,.36)'; g.fillRect(0,H-76,W,26);
-      g.fillStyle = 'rgba(0,0,0,.26)'; g.fillRect(0,H-34,W,34);
+      g.fillStyle = 'rgba(0,0,0,.42)'; g.fillRect(0,H-76,W,28);
+      g.fillStyle = 'rgba(0,0,0,.34)'; g.fillRect(0,H-36,W,36);
       g.fillStyle = pal.line;  g.fillRect(0,112,W,32);
       g.fillStyle = 'rgba(255,255,255,.22)'; g.fillRect(0,110,W,4);
       g.fillStyle = 'rgba(0,0,0,.24)'; g.fillRect(0,144,W,4);
@@ -3887,10 +3895,17 @@
         g.lineWidth = 3; g.strokeRect(x+1.5,83.5,145,75);
       });
 
-      g.fillStyle = 'rgba(8,10,14,.52)';
+      g.fillStyle = 'rgba(8,10,14,.58)';
       for(let i=0;i<4;i++) g.fillRect(x0+68+i*156, H-62, 96, 16);
+      g.fillStyle = 'rgba(255,255,255,.08)';
+      g.fillRect(x0+20,178,carW-40,2);
+      g.fillRect(x0+20,330,carW-40,2);
+      g.fillStyle = 'rgba(255,255,255,.12)';
+      for(let p=0;p<5;p++) g.fillRect(x0+52+p*122,54,2,270);
       g.fillStyle = 'rgba(8,8,8,.56)'; g.fillRect(x0+carW-9,12,9,H-24);
       g.fillStyle = 'rgba(255,255,255,.12)'; g.fillRect(x0+carW-12,14,2,H-28);
+      g.fillStyle = 'rgba(255,255,255,.10)';
+      g.fillRect(x0+12,20,carW-24,3);
     }
 
     for(let i=0;i<20;i++){
@@ -3926,123 +3941,132 @@
     const c = document.createElement('canvas'); c.width=W; c.height=H;
     const g = c.getContext('2d');
 
-    if(shapeType === 'keikyu'){
-      const shell = g.createLinearGradient(0,0,0,H);
-      shell.addColorStop(0,'#f05f58');
-      shell.addColorStop(.18,'#cf3136');
-      shell.addColorStop(.62,'#a11a24');
-      shell.addColorStop(1,'#6d121b');
-      g.fillStyle = shell; g.fillRect(0,0,W,H);
-
-      g.fillStyle = '#efe4c8';
-      g.beginPath();
-      g.moveTo(64,68); g.quadraticCurveTo(360,20,656,68);
-      g.lineTo(642,446); g.quadraticCurveTo(360,478,78,446); g.closePath();
-      g.fill();
-
-      g.fillStyle = '#0a0d10';
-      g.beginPath();
-      g.moveTo(182,62); g.quadraticCurveTo(360,36,538,62);
-      g.lineTo(542,454); g.lineTo(178,454); g.closePath(); g.fill();
-      g.strokeStyle = 'rgba(255,250,240,.84)'; g.lineWidth = 8;
-      g.strokeRect(184,64,352,386);
-
+    function addGlassReflections(pathPoints){
       const ref = g.createLinearGradient(0,0,W,0);
-      ref.addColorStop(0,'rgba(255,255,255,0)'); ref.addColorStop(.30,'rgba(255,255,255,.25)'); ref.addColorStop(.46,'rgba(255,255,255,.08)'); ref.addColorStop(1,'rgba(255,255,255,0)');
-      g.fillStyle = ref; g.beginPath(); g.moveTo(220,98); g.lineTo(278,98); g.lineTo(250,432); g.lineTo(204,432); g.closePath(); g.fill();
-
-      g.fillStyle = '#11151a'; g.fillRect(254,86,136,30); g.fillRect(392,86,82,30);
-      g.fillStyle = '#1f86a8'; g.fillRect(398,92,70,18);
-      g.fillStyle = '#36d4ff'; g.fillRect(260,92,58,18);
-      g.fillStyle = '#e8efe7'; g.fillRect(330,92,52,18);
-
-      g.fillStyle = '#d8d9d3'; g.fillRect(82,490,556,62);
-      g.fillStyle = '#be252f'; g.fillRect(84,548,552,102);
-      g.fillStyle = '#efe4c8'; g.fillRect(84,522,552,42);
-      g.fillStyle = 'rgba(255,255,255,.18)'; g.fillRect(84,548,552,4);
-      g.fillStyle = '#9aa1a5'; g.fillRect(330,614,60,8);
-      g.fillStyle = '#111519'; g.fillRect(152,574,60,26); g.fillRect(508,574,60,26);
-      g.fillStyle = 'rgba(255,238,176,.96)'; g.fillRect(160,580,42,14); g.fillRect(518,580,42,14);
-      g.fillStyle = '#14181c'; g.fillRect(446,164,74,24);
-      g.fillStyle = '#eee5d1'; g.font = 'bold 42px sans-serif'; g.fillText('1000', 452, 187);
-    } else if(shapeType === 'keihin'){
-      const shell = g.createLinearGradient(0,0,0,H);
-      shell.addColorStop(0,'#eef2f4');
-      shell.addColorStop(.16,'#bcc5ca');
-      shell.addColorStop(.52,'#68737b');
-      shell.addColorStop(1,'#333a40');
-      g.fillStyle = shell; g.fillRect(0,0,W,H);
-      const mask = g.createLinearGradient(0,0,0,H);
-      mask.addColorStop(0,'#ffffff');
-      mask.addColorStop(.44,'#f2f5f5');
-      mask.addColorStop(1,'#c7cbcb');
-      g.fillStyle = mask;
+      ref.addColorStop(0,'rgba(255,255,255,0)');
+      ref.addColorStop(.24,'rgba(255,255,255,.22)');
+      ref.addColorStop(.42,'rgba(255,255,255,.07)');
+      ref.addColorStop(1,'rgba(255,255,255,0)');
+      g.fillStyle = ref;
       g.beginPath();
-      g.moveTo(96,52); g.quadraticCurveTo(360,18,624,52);
-      g.lineTo(648,462); g.quadraticCurveTo(360,500,72,462); g.closePath(); g.fill();
-      g.fillStyle = '#030507';
-      g.beginPath();
-      g.moveTo(132,84); g.quadraticCurveTo(360,48,588,84);
-      g.lineTo(602,412); g.quadraticCurveTo(360,446,118,412); g.closePath(); g.fill();
-      g.strokeStyle = 'rgba(246,249,249,.82)'; g.lineWidth = 10;
-      g.beginPath();
-      g.moveTo(132,84); g.quadraticCurveTo(360,48,588,84);
-      g.lineTo(602,412); g.quadraticCurveTo(360,446,118,412); g.closePath(); g.stroke();
-      const ref = g.createLinearGradient(0,0,W,0);
-      ref.addColorStop(0,'rgba(255,255,255,0)'); ref.addColorStop(.30,'rgba(255,255,255,.22)'); ref.addColorStop(.52,'rgba(255,255,255,.08)'); ref.addColorStop(1,'rgba(255,255,255,0)');
-      g.fillStyle = ref; g.beginPath(); g.moveTo(158,106); g.lineTo(238,106); g.lineTo(192,394); g.lineTo(144,394); g.closePath(); g.fill();
-      g.fillStyle = '#0c1013'; g.fillRect(238,118,244,40);
-      g.fillStyle = pal.line; g.fillRect(252,128,124,18);
-      g.fillStyle = '#edf2f5'; g.fillRect(398,129,68,14);
-      g.fillStyle = pal.line; g.fillRect(96,434,528,94);
-      g.fillStyle = 'rgba(255,255,255,.16)'; g.fillRect(96,434,528,5);
-      g.fillStyle = 'rgba(0,0,0,.22)'; g.fillRect(96,526,528,4);
-      const skirt = g.createLinearGradient(0,566,0,H);
-      skirt.addColorStop(0,'#eef2f2'); skirt.addColorStop(.40,'#d3d8d8'); skirt.addColorStop(1,'#aeb5b8');
-      g.fillStyle = skirt; g.fillRect(120,570,480,66);
-      g.fillStyle = 'rgba(255,255,255,.26)'; g.fillRect(138,578,444,4);
-      g.fillStyle = 'rgba(0,0,0,.08)'; g.fillRect(138,632,444,2);
-      g.fillStyle = '#b9c0c3'; g.fillRect(330,606,60,8);
-      g.fillStyle = '#111519'; g.fillRect(122,594,104,42); g.fillRect(494,594,104,42);
-      g.fillStyle = 'rgba(255,238,176,.96)'; g.fillRect(146,606,38,20); g.fillRect(536,606,38,20);
-    } else {
-      const shell = g.createLinearGradient(0,0,0,H);
-      shell.addColorStop(0,'#d9ff8c');
-      shell.addColorStop(.14,'#97e44e');
-      shell.addColorStop(.46,'#64b42d');
-      shell.addColorStop(1,'#43821d');
-      g.fillStyle = shell; g.fillRect(0,0,W,H);
-      g.fillStyle = '#05070a';
-      g.beginPath();
-      g.moveTo(140,70); g.quadraticCurveTo(360,26,580,70);
-      g.lineTo(604,414); g.quadraticCurveTo(360,446,116,414); g.closePath(); g.fill();
-      g.strokeStyle = 'rgba(156,236,85,.88)'; g.lineWidth = 16;
-      g.beginPath();
-      g.moveTo(140,70); g.quadraticCurveTo(360,26,580,70);
-      g.lineTo(604,414); g.quadraticCurveTo(360,446,116,414); g.closePath(); g.stroke();
-      const ref = g.createLinearGradient(0,0,W,0);
-      ref.addColorStop(0,'rgba(255,255,255,0)'); ref.addColorStop(.28,'rgba(255,255,255,.24)'); ref.addColorStop(.48,'rgba(255,255,255,.08)'); ref.addColorStop(1,'rgba(255,255,255,0)');
-      g.fillStyle = ref; g.beginPath(); g.moveTo(164,98); g.lineTo(238,98); g.lineTo(194,394); g.lineTo(150,394); g.closePath(); g.fill();
-      g.fillStyle = '#0c1013'; g.fillRect(220,110,280,44);
-      g.fillStyle = pal.line; g.fillRect(250,122,166,18);
-      g.fillStyle = '#edf2f5'; g.fillRect(426,124,60,14);
-      for(let y=0;y<10;y++){
-        const alpha = 0.22 - y*0.018;
-        g.fillStyle = `rgba(5,8,10,${alpha.toFixed(3)})`;
-        for(let x=0;x<32;x++) g.fillRect(126+x*15, 454+y*14, 7, 7);
-      }
-      const skirt = g.createLinearGradient(0,572,0,H);
-      skirt.addColorStop(0,'#e0e5e5'); skirt.addColorStop(.45,'#c9cfd0'); skirt.addColorStop(1,'#b5bcbf');
-      g.fillStyle = skirt; g.fillRect(144,578,432,52);
-      g.fillStyle = 'rgba(255,255,255,.22)'; g.fillRect(160,584,400,4);
-      g.fillStyle = 'rgba(0,0,0,.08)'; g.fillRect(160,626,400,2);
-      g.fillStyle = '#b1b8bb'; g.fillRect(336,606,48,7);
-      g.fillStyle = '#111519'; g.fillRect(126,588,78,34); g.fillRect(516,588,78,34);
-      g.fillStyle = 'rgba(255,238,176,.96)'; g.fillRect(148,600,30,16); g.fillRect(542,600,30,16);
-      g.fillStyle = '#d1495b'; g.fillRect(104,104,22,22); g.fillRect(594,104,22,22);
+      pathPoints.forEach((p,i)=>{ if(i===0) g.moveTo(p[0],p[1]); else g.lineTo(p[0],p[1]); });
+      g.closePath(); g.fill();
+    }
+    function drawWipers(ax, ay, bx, by, cx, cy){
+      g.strokeStyle = 'rgba(18,22,26,.96)';
+      g.lineWidth = 6;
+      g.beginPath(); g.moveTo(ax,ay); g.lineTo(bx,by); g.lineTo(cx,cy); g.stroke();
+      g.lineWidth = 2.5;
+      g.strokeStyle = 'rgba(170,174,176,.75)';
+      g.beginPath(); g.moveTo(ax,ay); g.lineTo(bx,by); g.stroke();
+    }
+    function drawCommonDetails(numberText, destBarX, destBarY, destBarW, accentColor){
+      g.fillStyle = '#11161b'; g.fillRect(destBarX,destBarY,destBarW,34);
+      g.fillStyle = accentColor; g.fillRect(destBarX+12,destBarY+8,destBarW*.46,16);
+      g.fillStyle = '#f0f5f6'; g.fillRect(destBarX+destBarW*.64,destBarY+9,destBarW*.20,14);
+      g.fillStyle = '#e8eef0'; g.font = 'bold 21px sans-serif'; g.fillText(numberText, destBarX+destBarW*.70, destBarY+54);
+      g.fillStyle = 'rgba(255,255,255,.10)';
+      g.fillRect(destBarX+6,destBarY+40,destBarW-12,2);
     }
 
-    return new THREE.CanvasTexture(c);
+    if(shapeType === 'keikyu'){
+      const shell = g.createLinearGradient(0,0,0,H);
+      shell.addColorStop(0,'#f56e67'); shell.addColorStop(.16,'#d02b31'); shell.addColorStop(.58,'#9c1825'); shell.addColorStop(1,'#651019');
+      g.fillStyle = shell; g.fillRect(0,0,W,H);
+      g.fillStyle = '#f0e4cb';
+      g.beginPath(); g.moveTo(72,70); g.quadraticCurveTo(360,18,648,70); g.lineTo(640,470); g.quadraticCurveTo(360,494,80,470); g.closePath(); g.fill();
+      g.fillStyle = '#090d11';
+      g.beginPath(); g.moveTo(184,64); g.quadraticCurveTo(360,34,536,64); g.lineTo(544,462); g.lineTo(176,462); g.closePath(); g.fill();
+      g.strokeStyle = 'rgba(247,241,230,.88)'; g.lineWidth = 8; g.strokeRect(182,62,360,404);
+      addGlassReflections([[214,100],[284,100],[254,434],[206,434]]);
+      drawCommonDetails('1000', 246, 86, 230, '#39c4ff');
+      g.fillStyle = '#171b20'; g.fillRect(438,166,90,28);
+      g.fillStyle = '#f1e5cf'; g.font = 'bold 40px sans-serif'; g.fillText('1000', 446, 189);
+      g.fillStyle = '#ddd6c4'; g.fillRect(82,490,556,58);
+      g.fillStyle = '#efe4c8'; g.fillRect(84,522,552,38);
+      g.fillStyle = '#b91f2e'; g.fillRect(84,548,552,104);
+      g.fillStyle = 'rgba(255,255,255,.20)'; g.fillRect(84,548,552,4);
+      g.fillStyle = '#0f1318'; g.fillRect(146,570,72,34); g.fillRect(502,570,72,34);
+      g.fillStyle = 'rgba(255,240,186,.98)'; g.fillRect(154,580,56,16); g.fillRect(510,580,56,16);
+      g.fillStyle = '#b5bdc0'; g.fillRect(330,610,60,9);
+      g.fillStyle = 'rgba(255,255,255,.12)'; g.fillRect(126,628,468,3);
+      drawWipers(266,430,328,382,358,354); drawWipers(454,430,394,382,364,354);
+      g.strokeStyle = 'rgba(48,52,56,.55)'; g.lineWidth = 2;
+      g.strokeRect(180,62,364,406);
+    } else if(shapeType === 'keihin'){
+      const shell = g.createLinearGradient(0,0,0,H);
+      shell.addColorStop(0,'#f0f4f6'); shell.addColorStop(.14,'#b7c0c5'); shell.addColorStop(.52,'#5d6871'); shell.addColorStop(1,'#30373d');
+      g.fillStyle = shell; g.fillRect(0,0,W,H);
+      const mask = g.createLinearGradient(0,0,0,H);
+      mask.addColorStop(0,'#ffffff'); mask.addColorStop(.42,'#f3f7f8'); mask.addColorStop(1,'#ccd2d4');
+      g.fillStyle = mask;
+      g.beginPath(); g.moveTo(96,50); g.quadraticCurveTo(360,18,624,50); g.lineTo(646,470); g.quadraticCurveTo(360,506,74,470); g.closePath(); g.fill();
+      g.fillStyle = '#030608';
+      g.beginPath(); g.moveTo(132,82); g.quadraticCurveTo(360,46,588,82); g.lineTo(604,422); g.quadraticCurveTo(360,454,116,422); g.closePath(); g.fill();
+      g.strokeStyle = 'rgba(249,250,250,.84)'; g.lineWidth = 10;
+      g.beginPath(); g.moveTo(132,82); g.quadraticCurveTo(360,46,588,82); g.lineTo(604,422); g.quadraticCurveTo(360,454,116,422); g.closePath(); g.stroke();
+      addGlassReflections([[158,106],[240,106],[194,400],[144,400]]);
+      drawCommonDetails('E233', 236, 118, 248, pal.line);
+      g.fillStyle = pal.line; g.fillRect(96,434,528,96);
+      g.fillStyle = 'rgba(255,255,255,.14)'; g.fillRect(96,434,528,6);
+      g.fillStyle = 'rgba(0,0,0,.22)'; g.fillRect(96,528,528,4);
+      const skirt = g.createLinearGradient(0,566,0,H);
+      skirt.addColorStop(0,'#e9eded'); skirt.addColorStop(.36,'#d1d8d9'); skirt.addColorStop(1,'#a7afb3');
+      g.fillStyle = skirt; g.fillRect(118,568,484,72);
+      g.fillStyle = 'rgba(255,255,255,.24)'; g.fillRect(138,578,444,4);
+      g.fillStyle = '#101418'; g.fillRect(122,592,106,42); g.fillRect(492,592,106,42);
+      g.fillStyle = 'rgba(255,240,186,.98)'; g.fillRect(146,606,38,18); g.fillRect(536,606,38,18);
+      g.fillStyle = '#bcc3c6'; g.fillRect(330,608,60,8);
+      g.fillStyle = 'rgba(255,255,255,.10)'; g.fillRect(180,474,360,2);
+      drawWipers(270,390,336,364,366,346); drawWipers(450,390,386,364,356,346);
+      g.strokeStyle = 'rgba(120,126,130,.45)'; g.lineWidth = 2;
+      g.strokeRect(128,78,476,562);
+    } else {
+      const shell = g.createLinearGradient(0,0,0,H);
+      shell.addColorStop(0,'#d6ff87'); shell.addColorStop(.12,'#8fe047'); shell.addColorStop(.42,'#5ca629'); shell.addColorStop(1,'#3a7b1b');
+      g.fillStyle = shell; g.fillRect(0,0,W,H);
+      g.fillStyle = '#05080a';
+      g.beginPath(); g.moveTo(138,68); g.quadraticCurveTo(360,24,582,68); g.lineTo(606,418); g.quadraticCurveTo(360,450,114,418); g.closePath(); g.fill();
+      g.strokeStyle = 'rgba(152,236,84,.90)'; g.lineWidth = 16;
+      g.beginPath(); g.moveTo(138,68); g.quadraticCurveTo(360,24,582,68); g.lineTo(606,418); g.quadraticCurveTo(360,450,114,418); g.closePath(); g.stroke();
+      addGlassReflections([[166,98],[242,98],[196,396],[150,396]]);
+      drawCommonDetails('YM-15', 220, 108, 282, pal.line);
+      for(let y=0;y<10;y++){
+        const alpha = 0.24 - y*0.018;
+        g.fillStyle = `rgba(5,8,10,${alpha.toFixed(3)})`;
+        for(let x=0;x<33;x++) g.fillRect(122+x*14, 452+y*14, 7, 7);
+      }
+      const skirt = g.createLinearGradient(0,572,0,H);
+      skirt.addColorStop(0,'#dde3e3'); skirt.addColorStop(.45,'#c3cbcc'); skirt.addColorStop(1,'#b0b8bb');
+      g.fillStyle = skirt; g.fillRect(144,576,432,54);
+      g.fillStyle = 'rgba(255,255,255,.22)'; g.fillRect(160,584,400,4);
+      g.fillStyle = '#111519'; g.fillRect(126,588,78,34); g.fillRect(516,588,78,34);
+      g.fillStyle = 'rgba(255,240,186,.98)'; g.fillRect(148,598,30,16); g.fillRect(542,598,30,16);
+      g.fillStyle = '#d24a5a'; g.fillRect(104,102,22,22); g.fillRect(594,102,22,22);
+      g.fillStyle = 'rgba(255,255,255,.10)'; g.fillRect(194,470,332,2);
+      drawWipers(270,388,334,360,364,340); drawWipers(450,388,388,360,358,340);
+      g.strokeStyle = 'rgba(70,102,42,.40)'; g.lineWidth = 2;
+      g.strokeRect(124,64,484,566);
+    }
+
+    // 先頭部の細部：パネルライン、窓ゴム、縁の陰影
+    g.fillStyle = 'rgba(255,255,255,.06)';
+    g.fillRect(108,52,504,3);
+    g.fillStyle = 'rgba(0,0,0,.12)';
+    g.fillRect(108,646,504,3);
+    g.strokeStyle = 'rgba(0,0,0,.18)';
+    g.lineWidth = 1.4;
+    g.beginPath(); g.moveTo(158,514); g.lineTo(562,514); g.stroke();
+    g.beginPath(); g.moveTo(360,514); g.lineTo(360,634); g.stroke();
+
+    const tex = new THREE.CanvasTexture(c);
+    tex.minFilter = THREE.LinearMipmapLinearFilter;
+    tex.magFilter = THREE.LinearFilter;
+    tex.generateMipmaps = true;
+    tex.anisotropy = Math.min(4, renderer.capabilities.getMaxAnisotropy ? renderer.capabilities.getMaxAnisotropy() : 1);
+    tex.userData.sharedTexture = true;
+    tex.needsUpdate = true;
+    return tex;
   }
 
   const trainTextures = {
@@ -6147,43 +6171,188 @@
     }
   }
 
-  function addIndustrialPark(zStart, length=180){
+  function makeIndustrialCanvasTexture(kind='warehouseBlue'){
+    const W = 1024, H = 512;
+    const c = document.createElement('canvas'); c.width = W; c.height = H;
+    const g = c.getContext('2d');
+    g.clearRect(0,0,W,H);
+
+    if(kind === 'warehouseBlue'){
+      const bg = g.createLinearGradient(0,0,0,H);
+      bg.addColorStop(0,'#d5e2ee'); bg.addColorStop(.35,'#b9c9d6'); bg.addColorStop(1,'#98adbd');
+      g.fillStyle = bg; g.fillRect(0,0,W,H);
+      g.fillStyle = '#5b86ad'; g.fillRect(286,0,112,H);
+      g.fillStyle = '#6d95bb'; g.fillRect(0,0,36,H); g.fillRect(220,0,36,H); g.fillRect(486,0,36,H); g.fillRect(728,0,36,H); g.fillRect(962,0,36,H);
+      g.fillStyle = 'rgba(255,255,255,.78)'; g.fillRect(0,224,W,42);
+      g.fillStyle = 'rgba(86,123,158,.50)'; g.fillRect(0,266,W,10);
+      g.fillStyle = '#2b3b47'; g.fillRect(304,168,76,178);
+      g.fillStyle = '#a9c4dc'; g.fillRect(314,176,56,100);
+      g.fillStyle = '#1f2a33'; g.fillRect(0,H-26,W,26);
+      g.strokeStyle = 'rgba(255,255,255,.22)';
+      for(let x=0;x<W;x+=128){ g.beginPath(); g.moveTo(x,0); g.lineTo(x,H); g.stroke(); }
+    } else if(kind === 'officeWhite'){
+      const bg = g.createLinearGradient(0,0,0,H);
+      bg.addColorStop(0,'#fbfdff'); bg.addColorStop(.42,'#eef3f6'); bg.addColorStop(1,'#d8e0e6');
+      g.fillStyle = bg; g.fillRect(0,0,W,H);
+      g.fillStyle = '#dae8ef'; g.fillRect(0,150,W,120);
+      g.fillStyle = '#9ec2d6';
+      for(let i=0;i<22;i++) g.fillRect(26+i*44,158,30,104);
+      g.fillStyle = '#222d35'; g.fillRect(0,H-22,W,22);
+      g.fillStyle = '#d5dadd'; g.fillRect(0,300,W,170);
+      g.fillStyle = '#717b81'; g.fillRect(0,298,W,4);
+      g.fillStyle = '#3f4e57'; g.fillRect(368,86,120,190);
+      g.fillStyle = '#aac7d8'; g.fillRect(382,98,92,136);
+      g.strokeStyle = 'rgba(210,220,228,.55)';
+      for(let x=0;x<W;x+=84){ g.beginPath(); g.moveTo(x,0); g.lineTo(x,H); g.stroke(); }
+    } else if(kind === 'brickMill'){
+      g.fillStyle = '#8b4138'; g.fillRect(0,0,W,H);
+      for(let y=0;y<H;y+=24){
+        for(let x=0;x<W;x+=52){
+          const ox = ((y/24)%2)*26;
+          g.fillStyle = (x+y)%104===0 ? '#9d5748' : '#7b372f';
+          g.fillRect(x+ox,y,48,20);
+        }
+      }
+      g.strokeStyle = 'rgba(50,18,15,.35)';
+      for(let y=0;y<H;y+=24){ g.beginPath(); g.moveTo(0,y); g.lineTo(W,y); g.stroke(); }
+      g.fillStyle = '#d1d8dd';
+      for(let i=0;i<12;i++) g.fillRect(24+i*82,92,44,96);
+      for(let i=0;i<12;i++) g.fillRect(24+i*82,244,44,96);
+      g.fillStyle = '#15191d';
+      for(let i=0;i<12;i++) g.fillRect(30+i*82,98,32,84);
+      for(let i=0;i<12;i++) g.fillRect(30+i*82,250,32,84);
+      g.fillStyle = '#3b2b22'; g.fillRect(0,H-40,W,40);
+      g.fillStyle = '#8e3b2c'; g.fillRect(410,44,210,110);
+      g.fillStyle = '#a6acb0'; g.fillRect(650,30,18,450);
+    } else if(kind === 'powerPlant'){
+      const bg = g.createLinearGradient(0,0,0,H);
+      bg.addColorStop(0,'#6d6d68'); bg.addColorStop(.35,'#51504b'); bg.addColorStop(1,'#393937');
+      g.fillStyle = bg; g.fillRect(0,0,W,H);
+      g.fillStyle = '#4b4b48'; g.fillRect(0,60,W,210);
+      g.fillStyle = '#252729';
+      for(let i=0;i<14;i++) g.fillRect(30+i*68,88,36,20);
+      for(let i=0;i<14;i++) g.fillRect(30+i*68,126,36,20);
+      g.fillStyle = '#7e847f'; g.fillRect(0,270,W,32);
+      g.fillStyle = '#2f3132'; g.fillRect(0,302,W,140);
+      g.fillStyle = '#bcc0ba'; g.fillRect(0,0,120,80);
+      g.fillStyle = '#727873'; g.fillRect(124,0,170,72);
+      g.fillStyle = '#2f3436'; g.fillRect(302,0,180,82);
+      g.strokeStyle = 'rgba(220,220,220,.10)';
+      for(let x=0;x<W;x+=52){ g.beginPath(); g.moveTo(x,0); g.lineTo(x,H); g.stroke(); }
+      // パイプ群を描く
+      g.strokeStyle = 'rgba(172,176,172,.55)'; g.lineWidth = 6;
+      for(let i=0;i<5;i++){
+        const y = 336 + i*18;
+        g.beginPath(); g.moveTo(48,y); g.lineTo(420,y); g.stroke();
+      }
+      g.fillStyle = '#201f20'; g.fillRect(0,H-24,W,24);
+    } else if(kind === 'silo'){
+      const bg = g.createLinearGradient(0,0,0,H);
+      bg.addColorStop(0,'#edf0ed'); bg.addColorStop(.4,'#d9ddd7'); bg.addColorStop(1,'#b3b8b4');
+      g.fillStyle = bg; g.fillRect(0,0,W,H);
+      g.fillStyle = 'rgba(255,255,255,.22)';
+      for(let x=86;x<W;x+=172) g.fillRect(x,0,22,H);
+      g.strokeStyle = 'rgba(120,126,124,.30)';
+      for(let x=0;x<W;x+=86){ g.beginPath(); g.moveTo(x,0); g.lineTo(x,H); g.stroke(); }
+      g.fillStyle = '#9aa09b'; g.fillRect(0,H-26,W,26);
+    } else if(kind === 'stack'){
+      g.fillStyle = '#f6f7f4'; g.fillRect(0,0,W,H);
+      g.fillStyle = '#c65835'; g.fillRect(0,0,W,84);
+      g.fillRect(0,168,W,84);
+      g.fillRect(0,336,W,84);
+      g.fillStyle = 'rgba(0,0,0,.10)';
+      for(let y=0;y<H;y+=28) g.fillRect(0,y,W,2);
+      g.fillStyle = 'rgba(255,255,255,.18)'; g.fillRect(0,0,80,H);
+    }
+
+    const tex = new THREE.CanvasTexture(c);
+    tex.wrapS = tex.wrapT = THREE.ClampToEdgeWrapping;
+    tex.minFilter = THREE.LinearMipmapLinearFilter;
+    tex.magFilter = THREE.LinearFilter;
+    tex.generateMipmaps = true;
+    tex.anisotropy = Math.min(4, renderer.capabilities.getMaxAnisotropy ? renderer.capabilities.getMaxAnisotropy() : 1);
+    tex.userData.sharedTexture = true;
+    tex.needsUpdate = true;
+    return tex;
+  }
+
+  const industrialMaterials = {
+    warehouse: new THREE.MeshStandardMaterial({map: makeIndustrialCanvasTexture('warehouseBlue'), roughness:.86, metalness:.04}),
+    office: new THREE.MeshStandardMaterial({map: makeIndustrialCanvasTexture('officeWhite'), roughness:.84, metalness:.03}),
+    brick: new THREE.MeshStandardMaterial({map: makeIndustrialCanvasTexture('brickMill'), roughness:.90, metalness:.02}),
+    power: new THREE.MeshStandardMaterial({map: makeIndustrialCanvasTexture('powerPlant'), roughness:.88, metalness:.03}),
+    silo: new THREE.MeshStandardMaterial({map: makeIndustrialCanvasTexture('silo'), roughness:.76, metalness:.10}),
+    stack: new THREE.MeshStandardMaterial({map: makeIndustrialCanvasTexture('stack'), roughness:.78, metalness:.08}),
+    roofDark: new THREE.MeshStandardMaterial({color:0x636b72, roughness:.82, metalness:.10}),
+    roofLight: new THREE.MeshStandardMaterial({color:0xdadfe3, roughness:.84, metalness:.03}),
+    asphalt: new THREE.MeshStandardMaterial({color:0x5e6164, roughness:.92}),
+    concrete: new THREE.MeshStandardMaterial({color:0x8d9188, roughness:.94}),
+    dark: new THREE.MeshStandardMaterial({color:0x34393d, roughness:.82})
+  };
+  Object.values(industrialMaterials).forEach(markSharedMaterial);
+
+  function addIndustrialBox(x, y, z, w, h, d, sideMat, roofMat){
+    const mats = [sideMat, sideMat, roofMat || sideMat, industrialMaterials.concrete, sideMat, sideMat];
+    const box = new THREE.Mesh(new THREE.BoxGeometry(w,h,d), mats);
+    box.position.set(x, y + h/2, z); box.castShadow = true; box.receiveShadow = true; world.add(box); return box;
+  }
+
+  function addIndustrialPark(zStart, length=190){
     const zMid = zStart - length/2;
-    const groundMat = new THREE.MeshStandardMaterial({color:0x8a8d82, roughness:.92});
-    const roadMat = new THREE.MeshStandardMaterial({color:0x55595c, roughness:.88});
-    const wallMat = new THREE.MeshStandardMaterial({color:0xc9cdc8, roughness:.84});
-    const roofMat = new THREE.MeshStandardMaterial({color:0x6b747b, roughness:.80});
-    const darkMat = new THREE.MeshStandardMaterial({color:0x394046, roughness:.78});
-    const tankMat = new THREE.MeshStandardMaterial({color:0xd6d8d2, roughness:.64, metalness:.10});
     [-1,1].forEach(side=>{
-      const baseX = side*13.5;
-      const yard = new THREE.Mesh(new THREE.BoxGeometry(11.5,.06,length-12), groundMat);
-      yard.position.set(baseX,.03,zMid); world.add(yard);
-      const road = new THREE.Mesh(new THREE.BoxGeometry(4.0,.05,length-6), roadMat);
-      road.position.set(baseX-side*4.0,.05,zMid); world.add(road);
-      for(let i=0;i<3;i++){
-        const z = zStart - 24 - i*((length-48)/2);
-        const w = 5.6 + (i%2)*1.1;
-        const d = 16 + (i%2)*3;
-        const h = 3.4 + (i%2)*.6;
-        const hall = new THREE.Mesh(new THREE.BoxGeometry(w,h,d), wallMat);
-        hall.position.set(baseX + side*1.5, h/2, z); world.add(hall);
-        const roof = new THREE.Mesh(new THREE.BoxGeometry(w+.4,.35,d+.5), roofMat);
-        roof.position.set(baseX + side*1.5, h+.12, z); world.add(roof);
+      const baseX = side*15.0;
+      const yard = new THREE.Mesh(new THREE.BoxGeometry(13.2,.05,length-8), industrialMaterials.concrete);
+      yard.position.set(baseX,.025,zMid); world.add(yard);
+      const road = new THREE.Mesh(new THREE.BoxGeometry(4.6,.05,length-6), industrialMaterials.asphalt);
+      road.position.set(baseX-side*4.3,.05,zMid); world.add(road);
+      const roadLine = new THREE.Mesh(new THREE.BoxGeometry(.08,.012,length-12), new THREE.MeshStandardMaterial({color:0xe9ebe7, roughness:.95}));
+      roadLine.position.set(baseX-side*4.3,.08,zMid); world.add(roadLine);
+
+      if(side < 0){
+        // 発電所風の重厚な工場群
+        addIndustrialBox(baseX+1.2, 0, zStart-56, 8.6, 5.4, 25.0, industrialMaterials.power, industrialMaterials.roofDark);
+        addIndustrialBox(baseX+3.8, 0, zStart-108, 5.6, 4.0, 18.0, industrialMaterials.office, industrialMaterials.roofLight);
+        addIndustrialBox(baseX-2.7, 0, zStart-138, 6.4, 4.2, 20.0, industrialMaterials.power, industrialMaterials.roofDark);
+        const stackHeights = [11.8, 8.8, 13.4];
+        const stackZs = [zStart-38, zStart-86, zStart-126];
+        const stackXs = [baseX-3.4, baseX-1.0, baseX+1.9];
+        stackHeights.forEach((hh,i)=>{
+          const ch = new THREE.Mesh(new THREE.CylinderGeometry(.52,.60,hh,18), industrialMaterials.stack);
+          ch.position.set(stackXs[i], hh/2, stackZs[i]); ch.castShadow = true; world.add(ch);
+        });
+        const pipeRack = new THREE.Mesh(new THREE.BoxGeometry(7.4,1.2,1.6), industrialMaterials.dark);
+        pipeRack.position.set(baseX-1.8,1.1,zStart-76); world.add(pipeRack);
+        for(let i=0;i<4;i++){
+          const pipe = new THREE.Mesh(new THREE.CylinderGeometry(.10,.10,7.0,10), new THREE.MeshStandardMaterial({color:0xb6bbb6, roughness:.70, metalness:.12}));
+          pipe.rotation.z = Math.PI/2; pipe.position.set(baseX-1.8,1.18,zStart-77.6+i*.38); world.add(pipe);
+        }
+        const steam = new THREE.Mesh(new THREE.PlaneGeometry(7.2,4.2), new THREE.MeshBasicMaterial({color:0xffffff, transparent:true, opacity:.14, depthWrite:false}));
+        steam.position.set(baseX+0.8,6.5,zStart-86); steam.rotation.y = Math.PI*0.5; world.add(steam);
+      } else {
+        // 近代的倉庫＋事務所＋旧工場棟
+        addIndustrialBox(baseX-0.6, 0, zStart-52, 10.6, 4.4, 28.0, industrialMaterials.warehouse, industrialMaterials.roofLight);
+        addIndustrialBox(baseX+1.8, 0, zStart-116, 8.0, 3.8, 22.0, industrialMaterials.office, industrialMaterials.roofLight);
+        addIndustrialBox(baseX-3.0, 0, zStart-154, 7.2, 4.8, 18.4, industrialMaterials.brick, industrialMaterials.roofDark);
+        const chimney = new THREE.Mesh(new THREE.CylinderGeometry(.48,.58,9.8,16), industrialMaterials.brick);
+        chimney.position.set(baseX-0.5,4.9,zStart-154); world.add(chimney);
+        const tower = new THREE.Mesh(new THREE.BoxGeometry(.9,7.0,.9), industrialMaterials.dark);
+        tower.position.set(baseX+4.3,3.5,zStart-148); world.add(tower);
       }
-      const tank1 = new THREE.Mesh(new THREE.CylinderGeometry(1.25,1.25,3.8,18), tankMat);
-      tank1.position.set(baseX - side*4.2,1.9,zMid - 20); world.add(tank1);
-      const tank2 = new THREE.Mesh(new THREE.CylinderGeometry(1.0,1.0,3.1,18), tankMat);
-      tank2.position.set(baseX - side*6.2,1.55,zMid + 12); world.add(tank2);
-      const stack = new THREE.Mesh(new THREE.CylinderGeometry(.34,.42,6.2,12), new THREE.MeshStandardMaterial({color:0xb1b4af, roughness:.76}));
-      stack.position.set(baseX - side*1.4,3.1,zMid + 36); world.add(stack);
+
+      // 共通のサイロ・車両・フェンス
+      const silo1 = new THREE.Mesh(new THREE.CylinderGeometry(1.15,1.15,4.4,18), industrialMaterials.silo);
+      silo1.position.set(baseX-side*4.6,2.2,zMid-18); world.add(silo1);
+      const silo2 = new THREE.Mesh(new THREE.CylinderGeometry(.92,.92,3.7,18), industrialMaterials.silo);
+      silo2.position.set(baseX-side*6.2,1.85,zMid+24); world.add(silo2);
       for(let k=0;k<3;k++){
-        const truck = new THREE.Mesh(new THREE.BoxGeometry(1.1,.9,2.4), new THREE.MeshStandardMaterial({color:[0xd8d8d8,0x3b72b4,0xb94646][k%3], roughness:.58}));
-        truck.position.set(baseX - side*4.0,.48,zStart - 28 - k*16); world.add(truck);
+        const truck = new THREE.Mesh(new THREE.BoxGeometry(1.2,.88,2.6), new THREE.MeshStandardMaterial({color:[0xd8d9d5,0x366da5,0xb74744][k%3], roughness:.62}));
+        truck.position.set(baseX-side*4.1,.46,zStart-28-k*22); world.add(truck);
       }
-      for(let k=0;k<10;k++){
-        const post = new THREE.Mesh(new THREE.BoxGeometry(.08,.7,.08), darkMat);
-        post.position.set(baseX - side*5.8,.40,zStart - 8 - k*((length-16)/9)); world.add(post);
+      const fenceRail = new THREE.Mesh(new THREE.BoxGeometry(.08,.06,length-12), industrialMaterials.dark);
+      fenceRail.position.set(baseX-side*6.15,.86,zMid); world.add(fenceRail);
+      for(let k=0;k<12;k++){
+        const post = new THREE.Mesh(new THREE.BoxGeometry(.07,.8,.07), industrialMaterials.dark);
+        post.position.set(baseX-side*6.15,.42,zStart-8-k*((length-16)/11)); world.add(post);
       }
     });
   }
