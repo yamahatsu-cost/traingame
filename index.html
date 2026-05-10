@@ -169,6 +169,11 @@
   }
   .meter .label,.meter .unit{display:none}
   .meterCaption{color:#fff;text-align:center;font-weight:700;font-size:13px;margin-top:4px;text-shadow:0 1px 3px #000}
+  .mobileDigitalSpeed{display:none}
+  .mobileDigitalSpeed .label{font-size:12px;font-weight:700;letter-spacing:.08em;color:#cfd7df}
+  .mobileDigitalSpeed .valueLine{display:flex;align-items:flex-end;gap:6px}
+  .mobileDigitalSpeed .value{font-size:42px;line-height:1;font-weight:800;color:#f7fbff;text-shadow:0 1px 4px #000}
+  .mobileDigitalSpeed .unit{font-size:16px;font-weight:700;color:#d3dde8;line-height:1.2;margin-bottom:4px}
   .ticks{position:absolute;inset:8%;border-radius:50%}
   .tick{position:absolute;left:50%;top:50%;width:1px;height:46%;transform-origin:50% 0;background:transparent}
   .tick:before{content:"";position:absolute;left:-1px;top:0;width:2px;height:8px;background:#222}
@@ -311,35 +316,91 @@
   .routeLine:before,.routeLine:after{content:"";position:absolute;top:-6px;width:20px;height:20px;border-radius:50%;background:#111;border:3px solid #ffd400}
   .routeLine:before{left:0}.routeLine:after{right:0}
   @media(max-width:900px){
-    .meterLift{transform:none !important;gap:26px}
-    .meter{transform:none !important;width:150px;height:150px;min-width:150px;min-height:150px}
-    .dashboard{
-      left:50%;right:auto;bottom:var(--dashLift,0px);width:1180px;height:760px;
-      transform:translateX(-50%) scale(var(--dashScale,.34));
-      transform-origin:bottom center;
-      padding:24px 30px 34px 82px;
-      grid-template-columns:260px 210px 270px 150px 290px 140px;
-      grid-template-rows:300px 340px;
-      gap:14px;
+    .leftMenu,.cameraMini,.leftDevice,.statusPanel,.monitorPanel,.controlPanel,.stationPanel{display:none !important}
+    .topNotice{left:12px;right:12px;top:8px;font-size:12px;padding:7px 10px}
+    .routeStatus{left:8px;top:46px;width:170px;font-size:10px;padding:5px 8px}
+    .rightInfo{
+      top:46px;right:8px;width:132px;padding:6px 7px;font-size:10px;
+      background:rgba(0,0,0,.42);border-color:rgba(255,255,255,.12);
+      backdrop-filter:blur(2px);box-shadow:0 4px 12px rgba(0,0,0,.24);
     }
-    .frontSill{bottom:calc(var(--dashScreenHeight,260px) + var(--dashLift,0px))}
-    .wiper{bottom:calc(var(--dashScreenHeight,260px) + 10px + var(--dashLift,0px))}
-    .leftMenu,.cameraMini{display:none}
-    .routeStatus{left:8px;top:54px;width:230px;font-size:11px}
-    .rightInfo{width:170px;font-size:12px}.rightInfo .big{font-size:20px}
-    .stationPanel{width:170px;font-size:10px;right:6px;top:292px;bottom:auto}
-    .topNotice{left:20%;right:20%;font-size:14px}
-    .sideClock{left:10px;bottom:calc(var(--dashScreenHeight,260px) + var(--dashLift,0px) + 10px);min-width:102px;padding:6px 10px;font-size:18px}
-    .sideClock span{font-size:10px;margin-bottom:1px}
-    .bottomButtons button{min-width:66px;font-size:11px;height:34px}
-    .leftDevice{padding:10px;grid-template-columns:52px 1fr}
-    .monitorTop{font-size:14px}.monitorNext{font-size:28px}.monitor{padding:16px}.doors span{height:30px;line-height:28px;font-size:13px}
-    .statusPanel{font-size:14px}.lampList{font-size:18px;gap:10px}.lampDot{width:14px;height:14px}
-    .leverArea{transform:translateY(-72px) perspective(520px) rotateX(4deg);min-height:236px;padding:18px 18px;gap:16px}
-    .leverSlot{width:150px;min-height:210px}.leverHandle{width:132px;height:48px}.notchDisplay{width:72px;height:60px;font-size:34px}
-    .leverScaleLeft,.leverScaleRight{width:82px;font-size:18px}.leverHelp{font-size:13px}
-    .commandDock button{font-size:13px;min-height:46px;height:46px;white-space:nowrap}.commandDock{gap:7px;padding:8px;grid-template-columns:repeat(2,minmax(0,1fr)) !important;grid-auto-flow:row;grid-auto-rows:minmax(46px,auto);justify-items:stretch;align-content:start}.commandDock .cmdSpacer{height:46px}
-    .tripPanelFixed{right:18px;bottom:16px;min-width:210px;font-size:14px}.tripPanelFixed b{font-size:24px}
+    .rightInfo .row{padding:2px 0;border-bottom-color:rgba(255,255,255,.08)}
+    .rightInfo .big{font-size:16px}
+    .rightInfo .row:first-child{display:block;padding-bottom:4px}
+    .rightInfo .row:first-child b{display:block;font-size:11px;line-height:1.25}
+    .rightInfo .row:first-child span{display:block;text-align:right;font-size:9px;color:#cfd7de;margin-top:2px}
+    .rightInfo .row:nth-child(3),
+    .rightInfo .row:nth-child(4),
+    .rightInfo .row:nth-child(5),
+    .rightInfo .row:nth-child(6),
+    .rightInfo .row:nth-child(7),
+    #emgSmall{display:none !important}
+    .sideClock{left:8px;bottom:240px;min-width:112px;padding:6px 10px;font-size:16px}
+    .sideClock span{font-size:9px;margin-bottom:1px}
+    .frontSill{left:0;right:0;bottom:228px;height:14px}
+    .wiper{right:15vw;bottom:238px;height:30vh}
+    .wiper.w2{right:20vw;height:25vh}
+
+    .dashboard{
+      left:6px;right:6px;bottom:6px;width:auto;height:212px;
+      transform:none;transform-origin:bottom center;
+      padding:8px;
+      grid-template-columns:1.06fr 1fr 0.92fr;
+      grid-template-rows:72px 108px;
+      gap:8px;
+      border-radius:10px;
+      background:linear-gradient(180deg,rgba(14,17,20,.96) 0%,rgba(4,6,8,.97) 100%);
+    }
+
+    .commandDock{
+      grid-column:1;grid-row:1 / span 2;
+      padding:6px;gap:6px;
+      grid-template-columns:repeat(2,minmax(0,1fr)) !important;
+      grid-auto-rows:minmax(0,1fr);
+      border-radius:8px;
+    }
+    .commandDock button{
+      min-height:0;height:auto;font-size:11px;padding:0 4px;border-radius:6px;
+      white-space:nowrap;
+    }
+    .commandDock .cmdSpacer{display:none}
+
+    .meterPanel{
+      grid-column:2 / span 2;grid-row:1;
+      padding:8px 118px 8px 10px;
+      min-width:0;
+      display:flex;align-items:center;justify-content:flex-start;
+    }
+    .meterLift{display:none}
+    .mobileDigitalSpeed{
+      display:flex;flex-direction:column;justify-content:center;align-items:flex-start;
+      width:100%;height:100%;padding:4px 2px 4px 4px;
+    }
+
+    .tripPanelFixed{
+      position:absolute;right:8px;top:8px;bottom:auto;min-width:auto;
+      padding:4px 8px;border:1px solid rgba(255,255,255,.14);
+      border-radius:6px;background:rgba(0,0,0,.42);font-size:10px;
+      line-height:1.2;text-align:right;
+    }
+    .tripPanelFixed b{display:block;font-size:14px;margin-top:1px}
+
+    .leverArea{
+      grid-column:2 / span 2;grid-row:2;
+      transform:none;min-height:0;
+      padding:8px 8px 14px;gap:8px;border-radius:8px;
+      align-items:center;
+      justify-content:center;
+    }
+    .leverScaleLeft{width:44px;font-size:10px;line-height:1.1;padding:4px 0}
+    .leverScaleRight{display:none}
+    .leverSlot{width:78px;min-height:82px;height:82px;border-radius:10px}
+    .leverHandle{width:64px;height:24px}
+    .leverStem{width:16px}
+    .notchDisplay{width:46px;height:42px;font-size:22px;align-self:center}
+    .leverHelp{font-size:9px;left:6px;bottom:3px}
+
+    .bottomButtons, .pauseBtn{display:none}
   }
 </style>
 </head>
@@ -427,6 +488,7 @@
           <div class="meterCaption">ブレーキ kPa</div>
         </div>
       </div>
+      <div class="mobileDigitalSpeed" id="mobileDigitalSpeed"><div class="label">速度</div><div class="valueLine"><span class="value" id="mobileSpeedValue">0.0</span><span class="unit">km/h</span></div></div>
       <div class="clockSmall"></div>
     </section>
 
@@ -511,19 +573,20 @@
 <script>
 (() => {
   const wrap = document.getElementById('threeWrap');
+  const MOBILE_LIGHT = window.matchMedia && window.matchMedia('(max-width: 900px)').matches;
   const scene = new THREE.Scene();
   // 晴れ背景：雨天の灰色空をやめ、遠景山がぼけすぎない明るい空にする
   scene.background = new THREE.Color(0x98d0ff);
-  scene.fog = new THREE.Fog(0x98d0ff, 180, 760);
+  scene.fog = new THREE.Fog(0x98d0ff, MOBILE_LIGHT ? 130 : 180, MOBILE_LIGHT ? 560 : 760);
 
-  const camera = new THREE.PerspectiveCamera(58, innerWidth / innerHeight, 0.1, 900);
+  const camera = new THREE.PerspectiveCamera(58, innerWidth / innerHeight, 0.1, MOBILE_LIGHT ? 680 : 900);
   camera.position.set(0, 2.55, 4.5);
   camera.lookAt(0, 1.18, -90);
 
-  const renderer = new THREE.WebGLRenderer({antialias:true, powerPreference:'high-performance'});
-  renderer.setPixelRatio(Math.min(devicePixelRatio, 2));
+  const renderer = new THREE.WebGLRenderer({antialias:!MOBILE_LIGHT, powerPreference:'high-performance'});
+  renderer.setPixelRatio(MOBILE_LIGHT ? Math.min(devicePixelRatio, 1.05) : Math.min(devicePixelRatio, 2));
   renderer.setSize(innerWidth, innerHeight);
-  renderer.shadowMap.enabled = true;
+  renderer.shadowMap.enabled = !MOBILE_LIGHT;
   renderer.shadowMap.type = THREE.PCFSoftShadowMap;
   wrap.appendChild(renderer.domElement);
 
@@ -531,7 +594,7 @@
   scene.add(hemi);
   const dir = new THREE.DirectionalLight(0xffffff, 1.2);
   dir.position.set(-45, 90, 35);
-  dir.castShadow = true;
+  dir.castShadow = !MOBILE_LIGHT;
   scene.add(dir);
 
   // 一部テクスチャ共通処理用。駅ビル夜景テクスチャ内では同名のローカル変数で上書きする。
@@ -7400,6 +7463,7 @@
   const speedNeedle = document.getElementById('speedNeedle');
   const pressureNeedle = document.getElementById('pressureNeedle');
   const speedTxt = document.getElementById('speedTxt');
+  const mobileSpeedValue = document.getElementById('mobileSpeedValue');
   const notchTxt = document.getElementById('notchTxt');
   const notchDisplay = document.getElementById('notchDisplay');
   const distEl = document.getElementById('dist');
@@ -7538,6 +7602,7 @@
     const prAng = -130 + (Math.min(pressure,1000)/1000)*260;
     pressureNeedle.style.transform=`translate(-50%,-92%) rotate(${prAng}deg)`;
     speedTxt.textContent = speed.toFixed(1);
+    if(mobileSpeedValue) mobileSpeedValue.textContent = speed.toFixed(1);
     const dRound = Math.round(distance);
     if(distance >= 0){
       distEl.textContent = dRound;
@@ -7754,9 +7819,12 @@
   }
 
   let last = performance.now();
+  let mobileLastFrame = 0;
   function animate(now){
+    requestAnimationFrame(animate);
+    if(MOBILE_LIGHT && now - mobileLastFrame < 22) return;
+    mobileLastFrame = now;
     updateStationGuidance();
-  requestAnimationFrame(animate);
     const dt = Math.min(.05,(now-last)/1000); last=now;
     updateTimeOfDay(now);
     if(!paused){
@@ -7847,26 +7915,23 @@
   requestAnimationFrame(animate);
 
   function updateMobileDashboardScale(){
-    if(innerWidth <= 900){
-      const baseW = 1180;
-      const baseH = 760;
-      const scaleW = innerWidth / baseW;
-      const scaleH = (innerHeight * 0.86) / baseH;
-      const scale = Math.min(1, scaleW, scaleH);
-      const lift = Math.max(8, Math.min(18, innerHeight * 0.02));
-      document.documentElement.style.setProperty('--dashScale', scale.toFixed(4));
-      document.documentElement.style.setProperty('--dashScreenHeight', (baseH * scale).toFixed(1) + 'px');
-      document.documentElement.style.setProperty('--dashLift', lift.toFixed(1) + 'px');
-    }else{
-      document.documentElement.style.removeProperty('--dashScale');
-      document.documentElement.style.removeProperty('--dashScreenHeight');
-      document.documentElement.style.removeProperty('--dashLift');
-    }
+    document.documentElement.style.removeProperty('--dashScale');
+    document.documentElement.style.removeProperty('--dashScreenHeight');
+    document.documentElement.style.removeProperty('--dashLift');
   }
   updateMobileDashboardScale();
 
   addEventListener('resize',()=>{
     camera.aspect=innerWidth/innerHeight;camera.updateProjectionMatrix();
+    const isMobileNow = innerWidth <= 900;
+    camera.far = isMobileNow ? 680 : 900;
+    camera.updateProjectionMatrix();
+    if(scene.fog){
+      scene.fog.near = isMobileNow ? 130 : 180;
+      scene.fog.far = isMobileNow ? 560 : 760;
+    }
+    renderer.setPixelRatio(isMobileNow ? Math.min(devicePixelRatio, 1.05) : Math.min(devicePixelRatio, 2));
+    renderer.shadowMap.enabled = !isMobileNow;
     renderer.setSize(innerWidth,innerHeight);
     updateMobileDashboardScale();
   });
